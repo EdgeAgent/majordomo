@@ -107,4 +107,4 @@ in your home directory.
   marks one-time reminders done as it fires them, so a reminder is
   delivered once even with two listeners.
 - The daemon does not start the web UI. Run `majordomo serve` as well
-  if you want the chat page; the daemon is deliberately just the tick.
+  if you want the window; the daemon is deliberately just the tick.

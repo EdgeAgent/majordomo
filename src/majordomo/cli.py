@@ -6,7 +6,7 @@
     majordomo self        the self files: soul, identity, user, memory
     majordomo memory ...  inspect long-term memory
     majordomo schedule ...  manage reminders
-    majordomo serve       the web app (chat page + API)
+    majordomo serve       the web app (the one window + API)
     majordomo daemon      always-on mode: fire due reminders forever
     majordomo brief       today's brief: reminders, mail, memory
     majordomo demo        the scripted day on the fake provider
@@ -168,7 +168,7 @@ def serve(
     host: str = typer.Option("", help="Bind host (default from settings)."),
     port: int = typer.Option(0, help="Bind port (default from settings)."),
 ) -> None:
-    """Serve the web app: chat page + API."""
+    """Serve the web app: the one window + API."""
     import uvicorn
 
     from .webapp import create_app

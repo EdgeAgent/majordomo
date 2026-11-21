@@ -89,6 +89,10 @@ def test_fake_unknown_prompt_is_honest() -> None:
     provider = FakeProvider()
     response = provider.chat([{"role": "user", "content": "What is the meaning of life?"}], [])
     assert "fake provider" in response.text
+    # The canned reply must not imply only OpenAI-compatible providers
+    # work — Anthropic is a native adapter and every preset takes a key.
+    assert "any provider key" in response.text
+    assert "OpenAI-compatible provider" not in response.text
 
 
 # -- mail intents -------------------------------------------------------

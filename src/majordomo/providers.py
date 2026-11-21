@@ -314,7 +314,7 @@ class FakeProvider:
         return ProviderResponse(
             text=(
                 f'You said: "{user_text}" — I\'m the built-in fake provider, so this is a '
-                "canned reply. Connect Ollama or an OpenAI-compatible provider for real "
+                "canned reply. Connect Ollama or set any provider key for real "
                 "answers; ask me to remember, search, fetch, write, schedule, check mail, "
                 "brief you, or draw and I'll use the tools instead."
             )

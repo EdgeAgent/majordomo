@@ -1,1 +1,40 @@
-IyBQeXRob24KX19weWNhY2hlX18vCioucHlbY29kXQoqLnNvCiouZWdnLWluZm8vCi5lZ2dzLwoucHl0ZXN0X2NhY2hlLwoubXlweV9jYWNoZS8KLnJ1ZmZfY2FjaGUvCi5jb3ZlcmFnZQpodG1sY292LwoKIyBCdWlsZCBhcnRpZmFjdHMKZGlzdC8KYnVpbGQvCgojIFZpcnR1YWwgZW52aXJvbm1lbnRzIGFuZCBsb2NhbCBjb25maWd1cmF0aW9uCi52ZW52Lwp2ZW52LwouZW52Ci5lbnYuKgohLmVudi5leGFtcGxlCgojIExvY2FsIGRhdGEgd3JpdHRlbiBieSB0aGUgZGVtbyBzZXJ2ZXJzIChub3RlcyBzYW5kYm94LCBtaW5pLUNSTSBzdG9yZSkKLmFpLW1jcC1jcm0uanNvbgptY3Atbm90ZXMvCiouY3JtLmpzb24KCiMgRWRpdG9ycyBhbmQgb3BlcmF0aW5nIHN5c3RlbXMKLkRTX1N0b3JlCi5pZGVhLwoudnNjb2RlLwo=
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+
+# Virtual environments and local configuration
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Local data written by the demo servers (notes sandbox, mini-CRM store)
+.ai-mcp-crm.json
+mcp-notes/
+*.crm.json
+
+# Majordomo runtime state — never commit a live data directory or the
+# state files from one (goals, initiative, schedules) if a data dir is
+# ever pointed into this repo during development.
+.majordomo/
+goals.json
+initiative.json
+schedules.json
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/

@@ -221,6 +221,18 @@ def test_brand_files_and_404s(client: TestClient) -> None:
     assert client.get("/brand/../webapp.py").status_code == 404
 
 
+def test_empty_states_for_the_window_reads(client: TestClient) -> None:
+    # A fresh install: the Feed, Goal, and Artifact reads are all backed
+    # by empty lists, and the page carries an honest empty state for each.
+    assert client.get("/sessions").json() == []
+    assert client.get("/files").json() == []
+    assert client.get("/goals").json() == []
+    page = client.get("/").text
+    assert "Nothing yet" in page  # Feed
+    assert "No goals yet" in page  # Goal
+    assert "The workspace is empty" in page  # Artifact
+
+
 def test_self_data_matches_the_self_files(client: TestClient) -> None:
     response = client.get("/self-data")
     assert response.status_code == 200

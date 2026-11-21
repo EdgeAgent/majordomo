@@ -55,8 +55,12 @@ class MyProvider:
         ...
 ```
 
-Wire it into `build_provider` under a new `MAJORDOMO_PROVIDER` value,
-add its settings to `config.py` and `.env.example`, and test it with an
+For an endpoint that speaks an existing wire shape, you usually need
+no new adapter at all: add a `ProviderPreset` to `PROVIDER_PRESETS` in
+`providers.py` (name, adapter, base URL, default model, key field).
+For a genuinely new wire shape, implement the protocol and dispatch to
+it from `build_provider`. Either way, add the key setting to
+`config.py` and `.env.example`, and test it with an
 `httpx.MockTransport` client — no live calls in the suite, ever.
 
 ## Connect an MCP server

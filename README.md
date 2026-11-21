@@ -48,11 +48,12 @@ Majordomo takes the other side of that trade:
 
 ## What you can do
 
-- **Chat** in the terminal or in a small web UI that works on your phone — ask questions, give jobs, get answers with the tool calls shown, not hidden.
+- **Chat** in the terminal or in the one-window web UI (it works on your phone too) — ask questions, give jobs, get answers with the tool calls shown, not hidden.
 - **Be remembered, explicitly.** Say "remember that my favourite coffee is a double espresso" and it's a line in a file you own. Ask next week, in a *different* conversation, and Majordomo recalls it. Nothing is captured silently — memory is written only through the remember tool or the `memory` CLI, unless you opt in to self-filing (below).
 - **Research the web**: search plus readable page fetches, with failures reported as failures — never invented content.
 - **Get documents made**: Word briefs, PowerPoint decks, and Excel sheets, created and read back inside a sandboxed workspace the agent cannot escape.
 - **Set reminders** — one-time or daily/weekly — that fire into your chat inbox on schedule.
+- **Track goals** — the window's Goal read keeps your goals with a next move on each: add one, update its next move, tick it done. They persist in `goals.json` in the data directory.
 - **Generate images** through a pluggable backend (a placeholder backend ships; live generation uses your own provider key).
 - **Work your inbox** — list, read, and search email, save drafts into the workspace, and send (sending is an acting tool: it asks first). Standard-library IMAP/SMTP behind the `MAJORDOMO_MAIL_*` settings; offline runs get a seeded fake mailbox, and an unconfigured live run says so instead of pretending.
 - **Run always-on** — `majordomo daemon` ticks the scheduler forever, firing due reminders into your inbox session with no window open. Service files for systemd and Windows Task Scheduler ship in `deploy/` (see `docs/always-on.md`).
@@ -87,7 +88,8 @@ The engine's memory is one small JSON file (`initiative.json` in the data direct
 | Morning brief | `majordomo brief` — reminders, new mail, recent memory, templated from real state | Nothing |
 | Self-filing memory | Opt-in (`MAJORDOMO_AUTO_MEMORY`); a narrow extractor files stated facts after a turn | Nothing |
 | MCP client | stdio JSON-RPC client; remote tools namespaced `<server>__<tool>`, `readOnlyHint` honoured | Any MCP server |
-| Web UI + API | FastAPI, one self-contained page, `/chat` `/sessions` `/memory` `/health` | Nothing |
+| Web UI + API | FastAPI, the one window on one self-contained page, `/chat` `/sessions` `/memory` `/goals` `/files` `/brand/*` `/self` `/self-data` `/health` | Nothing |
+| Goals | `goals.json` in the data dir; CRUD from the window's Goal read or the `/goals` endpoints | Nothing |
 | Phone access | The same web UI over Tailscale Serve (below) | Tailscale on both devices |
 
 ## Quick start
@@ -100,7 +102,7 @@ cd majordomo
 docker compose up --build
 ```
 
-Open [http://127.0.0.1:8080](http://127.0.0.1:8080). The compose file expects a local Ollama on your host (it reaches it via `host.docker.internal`); pull a model first with `ollama pull llama3.1`. All state persists in the `majordomo-data` volume. To use a hosted model instead, set `MAJORDOMO_PROVIDER=openai` and `MAJORDOMO_OPENAI_API_KEY` in the compose environment.
+Open [http://127.0.0.1:8080](http://127.0.0.1:8080). The compose file expects a local Ollama on your host (it reaches it via `host.docker.internal`); pull a model first with `ollama pull llama3.1`. All state persists in the `majordomo-data` volume. To use a hosted model instead, set `MAJORDOMO_PROVIDER` to any preset name (e.g. `anthropic`) and that provider's `MAJORDOMO_*_API_KEY` variable in your shell or a local `.env` file — compose passes every key variable through.
 
 ### pip (the side door)
 
@@ -189,7 +191,7 @@ Majordomo is not a blank chatbot with tools. Four plain files at the top of the 
 | `USER.md` | The owner: name, timezone, what they care about. Ships as a template with prompts to fill in. |
 | `MEMORY.md` | The curated long-term memory — Facts / People / Preferences / Commitments, distilled above the day-to-day entries in `memory/`. |
 
-Edit a file and the next reply comes from a slightly different Majordomo. Inspect the set from the CLI with `majordomo self` (status of every file, plus the full SOUL.md), or open the web app's **`/self`** page — the same files rendered read-only under his fingerprint mark, next to the chat page.
+Edit a file and the next reply comes from a slightly different Majordomo. Inspect the set from the CLI with `majordomo self` (status of every file, plus the full SOUL.md), or tap the gold fingerprint in the window — the same files rendered read-only inside it, under his fingerprint mark (the standalone **`/self`** page serves them too).
 
 ### The little window
 
@@ -230,9 +232,11 @@ One process does everything; the **data directory** (default `~/.majordomo`, or 
 
 ```text
 ~/.majordomo/
+├── SOUL.md · IDENTITY.md · USER.md · MEMORY.md   the self files (yours to edit)
 ├── memory/          facts.md · preferences.md · notes.md   (yours to edit)
 ├── sessions/        one JSON file per conversation         (recall searches these)
 ├── schedules.json   reminders
+├── goals.json       goals and their next moves
 ├── initiative.json  initiative state: seen mail ids, fired reminders
 └── workspace/       the only folder the file/document tools may touch
     └── images/      generated images land here
@@ -303,7 +307,7 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 ```text
 .
 ├── .github/workflows/ci.yml    # Python matrix tests and package build
-├── assets/                     # Icon and banner (JPG), social preview + fingerprint mark (SVG)
+├── assets/                     # Icon, banner, dashboard + window images, social preview, fingerprint mark
 ├── docs/                       # Architecture, the extending guide, always-on setup
 ├── deploy/                     # systemd unit + Windows Task Scheduler installer
 ├── examples/                   # Example MCP server config
@@ -329,7 +333,10 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 │   ├── brief.py                # The deterministic morning brief
 │   ├── mcp_client.py           # stdio MCP client
 │   ├── runtime.py              # Wiring: settings in, agent out
-│   ├── webapp.py               # FastAPI app + the single-page chat UI
+│   ├── goals.py                # Goals + next moves, persisted in goals.json
+│   ├── mcp_server.py           # Majordomo as an MCP server (stdio)
+│   ├── static/                 # Brand images served at /brand/*
+│   ├── webapp.py               # FastAPI app + the one window
 │   ├── cli.py                  # The majordomo CLI
 │   └── demo.py                 # The scripted demo day
 ├── tests/                      # Fakes-first tests for all of it

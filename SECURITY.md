@@ -11,8 +11,8 @@ permission system — do not expose it to the public internet.
 ## What protects you
 
 - **The approval gate.** Acting tools (writes, document creation,
-  scheduling, image generation, non-read-only MCP tools) run only with
-  the run's approval.
+  scheduling, mail sending, image generation, non-read-only MCP
+  tools) run only with the run's approval.
 - **The workspace sandbox.** File and document tools resolve every path
   against one workspace directory and refuse escapes; the test suite
   attacks it with `..`, absolute paths, and symlinks.

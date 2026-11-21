@@ -27,7 +27,14 @@ what actually happened.
 | Module | Responsibility |
 | --- | --- |
 | `config.py` | `MAJORDOMO_*` settings; the data-dir layout |
-| `providers.py` | The provider protocol and its three adapters |
+| `providers.py` | The provider protocol, the preset registry, and its adapters (OpenAI-compatible, native Anthropic, Ollama, fake) |
+| `self_files.py` | SOUL / IDENTITY / USER / MEMORY: seeding + prompt assembly |
+| `mailtools.py` | Mail behind injectable backends (IMAP/SMTP, fake) |
+| `autocapture.py` | Opt-in self-filing memory extractor |
+| `initiative.py` | Mail watch + escalation, run per tick |
+| `brief.py` | The deterministic morning brief |
+| `goals.py` | Goals + next moves, persisted in `goals.json` |
+| `mcp_server.py` | Majordomo's own tools served over stdio MCP |
 | `agent.py` | The chat loop and the approval gate |
 | `tools.py` | The registry: schemas out, dispatch in |
 | `coretools.py` | Memory remember/recall + past-chat search tools |
@@ -40,18 +47,26 @@ what actually happened.
 | `scheduler.py` | Reminder store + `fire_due(now)` firing engine |
 | `mcp_client.py` | stdio MCP client: handshake, tools/list, tools/call |
 | `runtime.py` | Assembly — CLI, web app, and demo all build here |
-| `webapp.py` | FastAPI app, the single-page UI, the 30-second scheduler tick |
+| `webapp.py` | FastAPI app, the one-window UI, the goals/files/brand endpoints, the 30-second scheduler + initiative tick |
 | `cli.py` | The `majordomo` commands |
 
 ## Providers
 
 The agent speaks one internal message shape (OpenAI-style dicts) and
-each provider adapter translates to its wire format:
+each provider adapter translates to its wire format. Selection is
+`auto` by default: the first hosted key set wins (see the preset
+registry in `providers.py`), then a configured local Ollama, then the
+offline fake.
 
-- **Ollama** — `POST /api/chat`, non-streaming; tool calls arrive as
-  structured `message.tool_calls`. Default, local, keyless.
 - **OpenAI-compatible** — `POST /chat/completions`; tool-call arguments
-  arrive as JSON strings and are parsed defensively.
+  arrive as JSON strings and are parsed defensively. One parameterized
+  adapter serves every compatible preset (OpenAI, DeepSeek, Gemini,
+  OpenRouter, Groq, Mistral, xAI, Together).
+- **Anthropic** — a native Messages API adapter, whose wire shape
+  genuinely differs (top-level system prompt, `tool_use` /
+  `tool_result` blocks).
+- **Ollama** — `POST /api/chat`, non-streaming; tool calls arrive as
+  structured `message.tool_calls`. Local, keyless.
 - **Fake** — scripted responses for tests, plus a small deterministic
   intent matcher for the demo. It labels itself in every fallback reply.
 
@@ -75,8 +90,8 @@ backend is a fake; tests → explicit fakes. MCP tools inherit the rule:
 ## State
 
 Everything persistent lives under the data directory and is plain
-files: Markdown for memory, JSON for sessions and schedules, and the
-workspace for files the agent makes. There is no database to migrate
+files: Markdown for memory and the self files, JSON for sessions,
+schedules, and goals, and the workspace for files the agent makes. There is no database to migrate
 and nothing to export — copying the folder copies the agent's life.
 
 ## The scheduler

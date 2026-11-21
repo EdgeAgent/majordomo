@@ -34,6 +34,10 @@ dependencies = [
   "uvicorn",
 ]
 
+[project.urls]
+Homepage = "https://github.com/EdgeAgent/majordomo"
+Repository = "https://github.com/EdgeAgent/majordomo"
+
 [project.scripts]
 majordomo = "majordomo.cli:app"
 
