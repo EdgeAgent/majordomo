@@ -1,0 +1,29 @@
+# Majordomo always-on daemon — systemd user unit.
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp deploy/majordomo.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now majordomo
+#   loginctl enable-linger $USER    # keep it running after logout
+#
+# Configuration: Majordomo reads MAJORDOMO_* environment variables and
+# a .env file in the working directory. The working directory below is
+# your home directory, so a ~/.env file is picked up automatically.
+# Logs: journalctl --user -u majordomo -f
+
+[Unit]
+Description=Majordomo — self-hosted personal AI agent (always-on daemon)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h
+# Adjust if the majordomo executable lives elsewhere (for example a
+# virtualenv: /home/you/majordomo/.venv/bin/majordomo).
+ExecStart=%h/.local/bin/majordomo daemon --interval 30
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
