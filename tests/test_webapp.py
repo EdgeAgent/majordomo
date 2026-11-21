@@ -114,6 +114,23 @@ def test_index_is_the_one_window(client: TestClient) -> None:
     assert "Asking before acting" in page
 
 
+def test_index_stacks_chat_above_head_above_composer(client: TestClient) -> None:
+    page = client.get("/").text
+    # The owner's stack, top to bottom: the chat text (message history)
+    # runs above the head, and the composer you type in sits below the
+    # head. The head is its own stacked section — not an overlay, and
+    # not a panel above the chat.
+    log_at = page.index('id="log"')
+    head_at = page.index('id="head"')
+    composer_at = page.index('id="composer"')
+    assert log_at < head_at < composer_at
+    # The bubble and the steps/dots stay with their sections: bubble
+    # with the head (just above it in the face band), buttons and
+    # steps below the composer.
+    assert log_at < page.index('id="bubble"') < head_at
+    assert composer_at < page.index('data-read="ideas"') < page.index('id="steps"')
+
+
 def test_goals_crud_round_trip(client: TestClient) -> None:
     assert client.get("/goals").json() == []
 

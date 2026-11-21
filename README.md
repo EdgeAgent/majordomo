@@ -199,9 +199,9 @@ Domo's face is a little living window in the Pocket Pip style: the robot head fl
 **The window now ships in this repo.** Since 0.6.0, `majordomo serve` opens the one window as the web UI itself — one square panel with everything inside it: the living face, the chat window (the real agent loop, not a mock-up), the four reads, and Soul & Memory behind the fingerprint. The Artifact read is a files shelf: every file in the workspace, plus his brand images, listed with its type and size and downloadable in one tap. (A companion dashboard Space in the same style also exists in Domo's household — but the window's home is here, in the package.)
 
 <p align="center">
-  <img src="assets/dashboard.png" alt="The Majordomo window served by the repo itself — one square window: the robot head, the thought bubble, the chat window with the approval gate declining an unapproved memory write, the four read buttons, and the step row" width="72%">
+  <img src="assets/dashboard.png" alt="The Majordomo window served by the repo itself — one square window: chat text at the top, the robot head below it, the type box under the head, the four read buttons, and the step row" width="72%">
   <br>
-  <em>The window as `majordomo serve` serves it — a real run on the offline demo provider: the chat asks to file a memory, and the gate declines it because approval wasn't ticked. Looking is free; acting is permitted.</em>
+  <em>The window as `majordomo serve` serves it — a real run on the offline demo provider: the chat text runs above the head, the type box sits below it, and with approval ticked the coffee fact is filed to memory through the real tool loop.</em>
 </p>
 
 ## MCP: plug in any server

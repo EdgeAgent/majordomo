@@ -94,7 +94,8 @@ PAGE = """<!DOCTYPE html>
   header .spacer { flex: 1; }
   header .watch { color: #2DD4BF; font-size: 12px; }
   #fingerprint { background: none; border: 0; padding: 2px; cursor: pointer; line-height: 0; }
-  #stage { position: relative; min-height: 252px; padding: 14px 16px 8px;
+  #stage { position: relative; min-height: 236px; margin-top: 10px; padding: 14px 16px 8px;
+           border-top: 1px solid #14213F;
            background: radial-gradient(120% 130% at 18% 100%, #0D1B36 0%, #060A14 62%); }
   #bubble { position: absolute; top: 14px; right: 16px; max-width: 46%; background: #111B36;
             border: 1px solid #22304F; border-radius: 14px; padding: 9px 13px;
@@ -106,14 +107,14 @@ PAGE = """<!DOCTYPE html>
   #head.blink { transform: scaleY(.93); }
   @keyframes bounce { 30% { transform: translateY(-13px); } 60% { transform: translateY(2px); } }
   #headstatus { font-size: 12px; color: #8FA3C8; min-height: 15px; margin-top: 2px; }
-  #chat { border-top: 1px solid #22304F; padding: 10px 16px 4px; }
-  #log { max-height: 300px; overflow-y: auto; padding-right: 4px; }
+  #chat { border-top: 1px solid #22304F; padding-top: 10px; }
+  #log { max-height: 280px; overflow-y: auto; padding: 0 16px; }
   .msg { margin: 8px 0; padding: 9px 13px; border-radius: 12px; white-space: pre-wrap;
          line-height: 1.45; font-size: 14.5px; }
   .user { background: #111B36; margin-left: 14%; }
   .agent { background: #0D1526; border: 1px solid #22304F; margin-right: 14%; }
   .tool { color: #8FA3C8; font-size: 12px; margin: 2px 0 2px 8px; }
-  form#composer { display: flex; gap: 8px; align-items: center; padding: 10px 0 12px; }
+  form#composer { display: flex; gap: 8px; align-items: center; padding: 10px 16px 12px; }
   input[type=text] { flex: 1; padding: 11px 12px; border-radius: 10px; border: 1px solid #22304F;
                      background: #111B36; color: #E8EAF0; font-size: 15px; min-width: 0; }
   button.send { padding: 11px 17px; border-radius: 10px; border: 0; background: #E8B84B;
@@ -175,6 +176,12 @@ PAGE = """<!DOCTYPE html>
   #read form#goalform { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
   #read form#goalform input.goal { flex: 1; min-width: 130px; }
   .empty { color: #8FA3C8; font-size: 14px; padding: 6px 0; }
+  @media (max-width: 520px) {
+    #stage { min-height: 198px; }
+    #headwrap { width: 128px; }
+    #head { width: 128px; }
+    #bubble { max-width: 56%; }
+  }
   @media (prefers-reduced-motion: reduce) { #head { transition: none; } #head.bounce { animation: none; } }
 </style>
 </head>
@@ -188,16 +195,15 @@ PAGE = """<!DOCTYPE html>
     <span class="watch">● On watch</span>
   </header>
 
-  <div id="stage">
-    <div id="bubble">Watching for mail…</div>
-    <div id="headwrap">
-      <img id="head" src="/brand/roboto-head.png" alt="Domo — Roboto's robot head">
-      <div id="headstatus"></div>
-    </div>
-  </div>
-
   <div id="chat">
     <div id="log"></div>
+    <div id="stage">
+      <div id="bubble">Watching for mail…</div>
+      <div id="headwrap">
+        <img id="head" src="/brand/roboto-head.png" alt="Domo — Roboto's robot head">
+        <div id="headstatus"></div>
+      </div>
+    </div>
     <form id="composer">
       <input type="text" id="text" placeholder="Ask Majordomo…" autocomplete="off">
       <label class="approve"><input type="checkbox" id="approve"> approve actions</label>

@@ -6,6 +6,16 @@ follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **The window is a stack.** In the one-window web UI the chat text
+  now runs at the top, above the head; Roboto's head sits below the
+  chat text with its thought bubble, and the composer (type box,
+  approve actions, Send) sits below the head. The read buttons, the
+  Plan · Build · Write · Check · Done steps, and the agent dots stay
+  along the very bottom. Sections are stacked in the one window —
+  the head never floats over the chat.
+
 ## [0.6.0] — 2026-11-21
 
 ### Added
