@@ -16,6 +16,8 @@ from typing import Any
 
 import structlog
 
+from .autocapture import extract_facts
+from .memory import MemoryStore
 from .providers import Provider
 from .sessions import SessionStore
 from .tools import Approver, ToolError, ToolRegistry
@@ -36,7 +38,7 @@ Rules of the house:
 class AgentEvent:
     """One thing that happened during a turn, for transcripts and UIs."""
 
-    kind: str  # "tool_call" | "tool_result" | "declined" | "error" | "reply"
+    kind: str  # "tool_call" | "tool_result" | "declined" | "error" | "reply" | "memory"
     text: str
     tool: str | None = None
 
@@ -54,12 +56,20 @@ class Agent:
     """A provider, a registry, and a session store, looped."""
 
     def __init__(
-        self, provider: Provider, registry: ToolRegistry, sessions: SessionStore, max_steps: int = 8
+        self,
+        provider: Provider,
+        registry: ToolRegistry,
+        sessions: SessionStore,
+        max_steps: int = 8,
+        memory: MemoryStore | None = None,
+        auto_memory: bool = False,
     ) -> None:
         self.provider = provider
         self.registry = registry
         self.sessions = sessions
         self.max_steps = max_steps
+        self.memory = memory
+        self.auto_memory = auto_memory
 
     def run(self, session_id: str | None, user_text: str, approver: Approver) -> AgentResult:
         """Run one user message to a final reply, persisting the session."""
@@ -119,12 +129,36 @@ class Agent:
             history.append({"role": "assistant", "content": final_text})
             events.append(AgentEvent(kind="error", text=final_text))
 
+        self._auto_file(user_text, events)
         session["messages"] = history
         if not session.get("title"):
             session["title"] = user_text[:60]
         self.sessions.save(session)
         log.info("agent.turn", session=sid, events=len(events))
         return AgentResult(session_id=sid, text=final_text, events=events)
+
+    def _auto_file(self, user_text: str, events: list[AgentEvent]) -> None:
+        """File self-declared facts after a turn, when the operator opted in.
+
+        Self-filing is off unless ``auto_memory`` was enabled in the
+        settings; the extractor (see autocapture.py) only recognises
+        explicit "remember ..." statements and simple "my <thing> is
+        <value>" declarations. Facts already in memory are not filed
+        twice — a statement the agent also saved through the
+        ``memory_remember`` tool lands exactly once.
+        """
+        if not self.auto_memory or self.memory is None:
+            return
+        known = {entry.text.lower() for entry in self.memory.list()}
+        for fact in extract_facts(user_text):
+            if fact.lower() in known:
+                continue
+            try:
+                entry = self.memory.remember("fact", fact)
+            except ValueError:
+                continue
+            known.add(fact.lower())
+            events.append(AgentEvent(kind="memory", text=f"Filed to memory: {entry.text}"))
 
     def _execute(
         self, name: str, arguments: dict[str, Any], approver: Approver, events: list[AgentEvent]

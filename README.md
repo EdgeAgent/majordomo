@@ -30,11 +30,14 @@ Majordomo takes the other side of that trade:
 ## What you can do
 
 - **Chat** in the terminal or in a small web UI that works on your phone — ask questions, give jobs, get answers with the tool calls shown, not hidden.
-- **Be remembered, explicitly.** Say "remember that my favourite coffee is a double espresso" and it's a line in a file you own. Ask next week, in a *different* conversation, and Majordomo recalls it. Nothing is captured silently — memory is written only through the remember tool or the `memory` CLI.
+- **Be remembered, explicitly.** Say "remember that my favourite coffee is a double espresso" and it's a line in a file you own. Ask next week, in a *different* conversation, and Majordomo recalls it. Nothing is captured silently — memory is written only through the remember tool or the `memory` CLI, unless you opt in to self-filing (below).
 - **Research the web**: search plus readable page fetches, with failures reported as failures — never invented content.
 - **Get documents made**: Word briefs, PowerPoint decks, and Excel sheets, created and read back inside a sandboxed workspace the agent cannot escape.
 - **Set reminders** — one-time or daily/weekly — that fire into your chat inbox on schedule.
 - **Generate images** through a pluggable backend (a placeholder backend ships; live generation uses your own provider key).
+- **Work your inbox** — list, read, and search email, save drafts into the workspace, and send (sending is an acting tool: it asks first). Standard-library IMAP/SMTP behind the `MAJORDOMO_MAIL_*` settings; offline runs get a seeded fake mailbox, and an unconfigured live run says so instead of pretending.
+- **Run always-on** — `majordomo daemon` ticks the scheduler forever, firing due reminders into your inbox session with no window open. Service files for systemd and Windows Task Scheduler ship in `deploy/` (see `docs/always-on.md`).
+- **File its own facts — only if you opt in.** With `MAJORDOMO_AUTO_MEMORY=true`, simple statements in your own messages ("my favourite coffee is ...", "remember ...") are filed to memory after the turn. The extractor is deliberately narrow: questions, commands, and chit-chat are never filed. Off by default.
 - **Plug in MCP servers** — point Majordomo at a JSON config and every tool those servers expose joins the registry, approval gate included. The example config points Majordomo at a second Majordomo — it is an MCP server itself (`majordomo mcp-server`).
 
 ## Feature map
@@ -49,6 +52,9 @@ Majordomo takes the other side of that trade:
 | Office documents | Create + read `.docx` / `.pptx` / `.xlsx` | The `documents` extra |
 | Image generation | Backend protocol; fake PNG backend ships, OpenAI-compatible backend included | Your key for live images |
 | Reminders | JSON store; `schedule run-due` CLI + the web app's background tick | Nothing |
+| Mail | IMAP/SMTP tools (stdlib only) behind a backend protocol; fake mailbox offline, honest "not configured" otherwise | Your mail account for live use |
+| Always-on daemon | `majordomo daemon` ticks the scheduler; systemd + Task Scheduler files in `deploy/` | Nothing |
+| Self-filing memory | Opt-in (`MAJORDOMO_AUTO_MEMORY`); a narrow extractor files stated facts after a turn | Nothing |
 | MCP client | stdio JSON-RPC client; remote tools namespaced `<server>__<tool>`, `readOnlyHint` honoured | Any MCP server |
 | Web UI + API | FastAPI, one self-contained page, `/chat` `/sessions` `/memory` `/health` | Nothing |
 | Phone access | The same web UI over Tailscale Serve (below) | Tailscale on both devices |
@@ -107,7 +113,9 @@ Traffic stays inside your encrypted tailnet — nothing is published to the publ
 | `memory_recall`, `search_past_chats` | Search memory files; search past conversations | Read-only |
 | `workspace_list`, `workspace_read`, `read_document` | Look inside the workspace; read Office files | Read-only |
 | `list_reminders` | Show active reminders | Read-only |
+| `mail_list`, `mail_read`, `mail_search` | List, read, and search the inbox | Read-only |
 | `memory_remember` | Write one entry to long-term memory | **Acting** |
+| `mail_draft`, `mail_send` | Save an email draft in the workspace; send an email | **Acting** |
 | `workspace_write` | Write a file in the workspace | **Acting** |
 | `create_word_doc`, `create_powerpoint`, `create_spreadsheet` | Create Office documents | **Acting** |
 | `generate_image` | Generate an image into the workspace | **Acting** |
@@ -135,7 +143,7 @@ majordomo memory search coffee
 majordomo memory forget preference:1
 ```
 
-Automatic capture is **off**, permanently, by design. The only write paths are the `memory_remember` tool (approval-gated) and the commands above. If it isn't in the files, Majordomo doesn't remember it.
+Automatic capture is **off** by default, by design. The write paths are the `memory_remember` tool (approval-gated) and the commands above. One opt-in exists: set `MAJORDOMO_AUTO_MEMORY=true` and a deliberately narrow extractor files simple statements from your own messages after each turn — explicit "remember ..." statements and "my <thing> is <value>" declarations, filed as facts. Questions, commands, and chit-chat are never filed, and a fact already in memory is not filed twice. If it isn't in the files, Majordomo doesn't remember it.
 
 ## MCP: plug in any server
 
@@ -203,7 +211,7 @@ Majordomo is a **single-user** agent by design: no accounts, no multi-tenancy, n
 
 There is **no browser automation in v1** — no Chromium form-driving, no clicking through websites. Web research is search + readable fetch, and anything richer belongs in an MCP server you connect (that's what the protocol is for). Image generation ships with a placeholder backend; live images need your own provider key and run on your bill. The fake provider is a demo and testing tool — it pattern-matches obvious requests and answers the rest with a canned line that says what it is. Real conversation needs Ollama or an API key.
 
-Memory recall is honest token search over your files, not embeddings: it finds what shares words with your question, and it returns nothing rather than guessing. The scheduler fires while Majordomo is running (the web app ticks every 30 seconds; `majordomo schedule run-due` covers cron-style use) — it is not a system daemon. And the approval gate is a seatbelt, not a vault: it stops the agent from acting unapproved, but the workspace sandbox and your own backups are what protect your files.
+Memory recall is honest token search over your files, not embeddings: it finds what shares words with your question, and it returns nothing rather than guessing. The scheduler fires while a Majordomo listener is running: the web app ticks every 30 seconds, `majordomo daemon` ticks forever on its own, and the shipped systemd / Task Scheduler files (see `docs/always-on.md`) make that listener a real always-on service. And the approval gate is a seatbelt, not a vault: it stops the agent from acting unapproved, but the workspace sandbox and your own backups are what protect your files.
 
 ## Repository layout
 
@@ -211,7 +219,8 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 .
 ├── .github/workflows/ci.yml    # Python matrix tests and package build
 ├── assets/                     # Icon and banner (JPG) + social preview (SVG)
-├── docs/                       # Architecture and the extending guide
+├── docs/                       # Architecture, the extending guide, always-on setup
+├── deploy/                     # systemd unit + Windows Task Scheduler installer
 ├── examples/                   # Example MCP server config
 ├── scripts/demo.py             # Standalone demo, no install needed
 ├── src/majordomo/
@@ -224,6 +233,8 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 │   ├── sessions.py             # Persisted conversations + cross-session search
 │   ├── filetools.py            # The sandboxed workspace
 │   ├── webtools.py             # Search + fetch behind injectable backends
+│   ├── mailtools.py            # Mail behind injectable backends (IMAP/SMTP, fake)
+│   ├── autocapture.py          # Opt-in self-filing memory extractor
 │   ├── doctoolkit.py           # Word / PowerPoint / Excel (documents extra)
 │   ├── imagetools.py           # Image backends: fake + OpenAI-compatible
 │   ├── scheduler.py            # Reminders and the firing engine

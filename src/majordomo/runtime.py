@@ -17,6 +17,7 @@ from .coretools import register_memory_tools
 from .doctoolkit import register_document_tools
 from .filetools import Workspace, register_file_tools
 from .imagetools import FakeImageBackend, OpenAIImageBackend, register_image_tools
+from .mailtools import build_mail_backend, register_mail_tools
 from .mcp_client import MCPClient, load_mcp_config, register_mcp_tools
 from .memory import MemoryStore
 from .providers import Provider, build_provider
@@ -93,6 +94,7 @@ def build_runtime(
             image_backend = FakeImageBackend()
             image_is_fake = True
     register_image_tools(registry, workspace, image_backend, image_is_fake)
+    register_mail_tools(registry, build_mail_backend(settings, is_offline), workspace)
     register_schedule_tools(registry, schedules, lambda: datetime.now(UTC))
 
     mcp_clients: list[MCPClient] = []
@@ -108,7 +110,13 @@ def build_runtime(
             register_mcp_tools(registry, client)
             mcp_clients.append(client)
 
-    agent = Agent(provider=provider, registry=registry, sessions=sessions)
+    agent = Agent(
+        provider=provider,
+        registry=registry,
+        sessions=sessions,
+        memory=memory,
+        auto_memory=settings.auto_memory,
+    )
     return Runtime(
         settings=settings,
         provider=provider,

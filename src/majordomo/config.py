@@ -38,6 +38,23 @@ class Settings(BaseSettings):
     # Image generation backend: "fake" (placeholder PNG) or "openai".
     image_backend: str = "fake"
 
+    # Mail tools: IMAP for reading, SMTP for sending, standard library
+    # only. With a live provider and no mail settings, the mail tools
+    # report "not configured" instead of pretending; the fake provider
+    # pairs with a seeded fake mailbox (see mailtools.py).
+    mail_address: str | None = None
+    mail_username: str | None = None
+    mail_password: str | None = None
+    mail_imap_host: str | None = None
+    mail_smtp_host: str | None = None
+    mail_smtp_port: int = 587
+
+    # Self-filing memory: when True, the agent files simple declarative
+    # statements from the user's own messages ("my favourite coffee is
+    # ...", "remember ...") into long-term memory after each turn. Off
+    # by default — capture is the operator's choice, never a surprise.
+    auto_memory: bool = False
+
     # Web app bind for `majordomo serve`.
     host: str = "127.0.0.1"
     port: int = 8080

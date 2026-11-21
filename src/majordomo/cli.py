@@ -5,6 +5,7 @@
     majordomo memory ...  inspect long-term memory
     majordomo schedule ...  manage reminders
     majordomo serve       the web app (chat page + API)
+    majordomo daemon      always-on mode: fire due reminders forever
     majordomo demo        the scripted day on the fake provider
     majordomo version
 
@@ -15,6 +16,7 @@ asked per tool call.
 
 from __future__ import annotations
 
+import time
 from datetime import UTC, datetime, timedelta
 
 import typer
@@ -111,6 +113,40 @@ def serve(
         host=host or settings.host,
         port=port or settings.port,
     )
+
+
+@app.command()
+def daemon(
+    interval: int = typer.Option(30, "--interval", help="Seconds between scheduler ticks."),
+    once: bool = typer.Option(False, "--once", help="Run one tick and exit."),
+) -> None:
+    """Run always-on: fire due reminders into the inbox, forever.
+
+    Each tick is the web app's background loop without the web app:
+    fire everything due, print it, and drop it into the ``inbox``
+    session. Run it as a service (see docs/always-on.md) and reminders
+    land even when no window is open.
+    """
+    runtime = _runtime()
+    try:
+        while True:
+            fired = runtime.schedules.fire_due(datetime.now(UTC))
+            for reminder in fired:
+                console.print(f"⏰ {reminder.text}")
+                runtime.sessions.append(
+                    "inbox",
+                    {
+                        "role": "assistant",
+                        "content": f"⏰ Reminder: {reminder.text}",
+                    },
+                )
+            if once:
+                if not fired:
+                    console.print("Nothing due.")
+                break
+            time.sleep(interval)
+    finally:
+        runtime.close()
 
 
 @app.command("mcp-server")

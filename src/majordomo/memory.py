@@ -6,8 +6,11 @@ so the user can open the files in any editor, read exactly what the
 agent remembers, fix it, or delete it. There is no database and no
 hidden state: what is in the files is what the agent knows.
 
-Automatic capture is OFF. Entries are written only when the agent calls
-the ``memory_remember`` tool or the user runs ``majordomo memory add``.
+Automatic capture is OFF by default. Entries are written when the agent
+calls the ``memory_remember`` tool or the user runs ``majordomo memory
+add`` — plus, only when the operator opts in with
+``MAJORDOMO_AUTO_MEMORY``, the narrow self-filing extractor in
+``autocapture.py``.
 """
 
 from __future__ import annotations

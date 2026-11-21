@@ -8,6 +8,23 @@ follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Mail tools: `mail_list` / `mail_read` / `mail_search` (read-only) and
+  `mail_draft` / `mail_send` (acting, approval-gated), behind an
+  injectable backend — IMAP/SMTP from the standard library via the new
+  `MAJORDOMO_MAIL_*` settings, a seeded fake mailbox for offline runs,
+  and an honest "not configured" error when a live run has no mail
+  settings. Drafts are saved as files in the workspace `drafts/` area.
+- Always-on mode: `majordomo daemon` ticks the scheduler forever
+  (`--interval` seconds, `--once` for a single tick), firing due
+  reminders into the inbox session with no window open. Ships a
+  systemd user unit (`deploy/majordomo.service`), a Windows Task
+  Scheduler installer (`deploy/install-windows-task.ps1`), and
+  `docs/always-on.md`.
+- Self-filing memory, opt-in via the new `MAJORDOMO_AUTO_MEMORY`
+  setting (off by default): after each turn, a conservative extractor
+  files explicit "remember ..." statements and simple "my <thing> is
+  <value>" declarations as facts. Questions, commands, and chit-chat
+  are never filed, and facts already in memory are not duplicated.
 - A built-in MCP server: `majordomo mcp-server` serves Majordomo's own
   tools over stdio to any MCP client. Read-only tools by default;
   `--allow-write` exposes the acting tools, the operator's explicit
