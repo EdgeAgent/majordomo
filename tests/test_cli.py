@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from typer.testing import CliRunner
 
+from majordomo import __version__
 from majordomo.cli import app
 from majordomo.demo import run_demo
 
@@ -14,7 +15,7 @@ runner = CliRunner()
 def test_version() -> None:
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "0.7.0" in result.stdout
+    assert __version__ in result.stdout
 
 
 def test_demo_command() -> None:

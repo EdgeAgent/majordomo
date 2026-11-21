@@ -32,6 +32,17 @@ created date), a ``transcript.jsonl`` with one JSON line per run
 character's runs append a one-line outcome summary to — the
 character's own memory of what it has done here.
 
+The characters also have faces. Kevin supplied a cast portrait of
+the team (``assets/friends-cast.jpg`` in the repository); each mapped
+character's crop lives at ``assets/faces/<slug>.png`` and is recorded
+on the spec as ``avatar`` (and on the character card). Domo's own
+face from the portrait is :data:`DOMO_AVATAR` — his canonical head
+elsewhere (the web window's Roboto head) is a separate asset and is
+not touched by this. Copilot and Aider are not in the portrait, so
+they keep their initial avatars (``avatar=None``) until their faces
+arrive. The terminal roster stays text; the faces are for the
+repository and future surfaces.
+
 Registration rule: the ``delegate_task`` tool is registered when
 teammates are enabled (``MAJORDOMO_TEAMMATES``, default on) **and**
 at least one known CLI is detected on the PATH — or when teammates
@@ -71,7 +82,10 @@ class AgentCLI:
     ``{task}`` element is replaced by the task text (as one argument —
     never through a shell). ``experimental`` marks entries whose
     non-interactive flags are less certain; they work the same way
-    but are labelled honestly in the docs and the roster.
+    but are labelled honestly in the docs and the roster. ``avatar``
+    is the character's face — a repository-relative path under
+    ``assets/faces/``, cropped from the cast portrait — or ``None``
+    for characters who have no face yet and keep their initial.
     """
 
     key: str  # the name the model and the CLI use ("claude", "cursor")
@@ -81,6 +95,7 @@ class AgentCLI:
     argv: tuple[str, ...]  # invocation template after the binary
     initial: str  # avatar initial
     colour: str  # avatar colour (Majordomo's navy / gold / teal world)
+    avatar: str | None = None  # face file under assets/faces/, if the character has one
     experimental: bool = False
 
     @property
@@ -90,6 +105,11 @@ class AgentCLI:
     def build_argv(self, binary_path: str, task: str) -> list[str]:
         return [binary_path, *[task if part == _TASK_PLACEHOLDER else part for part in self.argv]]
 
+
+# Domo's own face from the cast portrait. (His canonical head — the
+# Roboto head the web window serves — is a separate asset; this crop
+# is only his portrait face, for the repository and future surfaces.)
+DOMO_AVATAR = "assets/faces/domo.png"
 
 # The cast, in roster order. Domo himself is not in this table — he is
 # the chief of staff who delegates; these are the hands he delegates to.
@@ -104,6 +124,7 @@ AGENT_CLIS: dict[str, AgentCLI] = {
             argv=("-p", _TASK_PLACEHOLDER),
             initial="C",
             colour="#E8B84B",
+            avatar="assets/faces/claude.png",
         ),
         AgentCLI(
             key="codex",
@@ -113,6 +134,7 @@ AGENT_CLIS: dict[str, AgentCLI] = {
             argv=("exec", _TASK_PLACEHOLDER),
             initial="X",
             colour="#2DD4BF",
+            avatar="assets/faces/codex.png",
         ),
         AgentCLI(
             key="gemini",
@@ -122,6 +144,7 @@ AGENT_CLIS: dict[str, AgentCLI] = {
             argv=("-p", _TASK_PLACEHOLDER),
             initial="G",
             colour="#5EEAD4",
+            avatar="assets/faces/gemini.png",
         ),
         AgentCLI(
             key="opencode",
@@ -131,6 +154,7 @@ AGENT_CLIS: dict[str, AgentCLI] = {
             argv=("run", _TASK_PLACEHOLDER),
             initial="O",
             colour="#F5D67B",
+            avatar="assets/faces/otto.png",
         ),
         AgentCLI(
             key="cursor",
@@ -140,6 +164,7 @@ AGENT_CLIS: dict[str, AgentCLI] = {
             argv=("-p", _TASK_PLACEHOLDER),
             initial="U",
             colour="#94A3B8",
+            avatar="assets/faces/cursor.png",
         ),
         AgentCLI(
             key="copilot",
@@ -277,6 +302,7 @@ def ensure_character(teammates_dir: Path, spec: AgentCLI, now: datetime | None =
             "agent": spec.key,
             "binary": spec.binary,
             "role": spec.role,
+            "avatar": spec.avatar,
             "created": (now or datetime.now(UTC)).date().isoformat(),
         }
         card_path.write_text(json.dumps(card, indent=2) + "\n", encoding="utf-8")

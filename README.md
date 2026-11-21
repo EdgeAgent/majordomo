@@ -50,16 +50,22 @@ The hosted personal agents are genuinely impressive, and they all share one prop
 
 Domo is the chief of staff — he remembers, schedules, researches, and asks before acting. He is not the only pair of hands in the house. The coding-agent CLIs installed on your machine become **teammates**: named characters with roles, whom Domo can hand a coding task to through the acting `delegate_task` tool.
 
-| Name | Who they are | Runs on |
-| --- | --- | --- |
-| **Majordomo (Domo)** | chief of staff — delegates, remembers, asks first | Majordomo itself (any provider key, or Ollama) |
-| **Claude** | the senior engineer | `claude` (Claude Code) |
-| **Codex** | the fast prototyper | `codex` (Codex CLI) |
-| **Gemini** | the researcher | `gemini` (Gemini CLI) |
-| **Otto** | the open-source all-rounder | `opencode` (OpenCode) |
-| **Cursor** | the editor | `cursor-agent` (Cursor) |
-| **Copilot** | the pair programmer | `copilot` (GitHub Copilot CLI) |
-| **Aider** | the focused patcher | `aider` (experimental — its non-interactive flags are the least battle-tested) |
+<p align="center">
+  <img src="assets/friends-cast.jpg" alt="The friends — the Majordomo cast portrait: six robot characters in a row on dark navy" width="88%">
+  <br>
+  <em>The friends, left to right: <strong>Otto</strong> (teal), <strong>Gemini</strong> (orange), <strong>Domo</strong> (blue), <strong>Cursor</strong> (purple), <strong>Codex</strong> (red), and <strong>Claude</strong> (white). Cast art supplied by Kevin. Copilot and Aider aren't in the portrait yet — they're still waiting on their faces, and use their initial avatars until theirs arrive.</em>
+</p>
+
+| Face | Name | Who they are | Runs on |
+| --- | --- | --- | --- |
+| <img src="assets/faces/domo.png" alt="Domo's face — the blue robot" width="64"> | **Majordomo (Domo)** | chief of staff — delegates, remembers, asks first | Majordomo itself (any provider key, or Ollama) |
+| <img src="assets/faces/claude.png" alt="Claude's face — the white robot" width="64"> | **Claude** | the senior engineer | `claude` (Claude Code) |
+| <img src="assets/faces/codex.png" alt="Codex's face — the red robot" width="64"> | **Codex** | the fast prototyper | `codex` (Codex CLI) |
+| <img src="assets/faces/gemini.png" alt="Gemini's face — the orange robot" width="64"> | **Gemini** | the researcher | `gemini` (Gemini CLI) |
+| <img src="assets/faces/otto.png" alt="Otto's face — the teal robot" width="64"> | **Otto** | the open-source all-rounder | `opencode` (OpenCode) |
+| <img src="assets/faces/cursor.png" alt="Cursor's face — the purple robot" width="64"> | **Cursor** | the editor | `cursor-agent` (Cursor) |
+| — | **Copilot** | the pair programmer | `copilot` (GitHub Copilot CLI) |
+| — | **Aider** | the focused patcher | `aider` (experimental — its non-interactive flags are the least battle-tested) |
 
 How a delegation works: say *"delegate to Claude: fix the parser"* (or ask the model in your own words). `delegate_task` is an **acting** tool, so it passes the approval gate — nothing runs unapproved. The teammate runs in the sandboxed workspace via its CLI's non-interactive mode (`claude -p`, `codex exec`, `gemini -p`, `opencode run`, `cursor-agent -p`, `copilot -p`, `aider --message … --yes-always`), with a hard timeout (`MAJORDOMO_TEAMMATE_TIMEOUT`, default 600s; a run that overruns is stopped). Its output comes back into the conversation, and the run is recorded in the character's home — `teammates/<name>/` in the data directory: a `character.json` card, a `transcript.jsonl` of every run, and a `notes.md` where each run appends a one-line outcome. Per-character memory, in plain files, like everything else here.
 

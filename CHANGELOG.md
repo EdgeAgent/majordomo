@@ -4,6 +4,30 @@ All notable changes to Majordomo are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.7.1] — 2026-11-21
+
+### Added
+
+- **The friends: the team has faces.** Kevin supplied a cast
+  portrait of the team — six robot characters in a row on dark
+  navy — now in the repository as `assets/friends-cast.jpg`, with a
+  tight crop per character under `assets/faces/` (`domo.png`,
+  `claude.png`, `codex.png`, `gemini.png`, `otto.png`,
+  `cursor.png`). The mapping, left to right in the portrait: teal =
+  Otto (OpenCode), orange = Gemini, blue = Domo himself, purple =
+  Cursor, red = Codex, white = Claude. Each mapped teammate's spec
+  in `teammates.py` gained an `avatar` path (Domo's is the
+  module-level `DOMO_AVATAR`), and newly written `character.json`
+  cards record it. The README's "Meet the team" section shows the
+  cast portrait and a face per row of the cast table.
+- **Honest gap:** the portrait holds six of the eight characters —
+  Copilot and Aider have no faces yet and keep their initial
+  avatars (`avatar=None`) until theirs arrive. The faces are
+  repository-side for now: the terminal roster stays text, the web
+  window is unchanged, and Domo's canonical Roboto head (the one
+  the window serves) is untouched — the portrait crop is his face
+  for the repo and future surfaces, not a replacement.
+
 ## [0.7.0] — 2026-11-21
 
 ### Added

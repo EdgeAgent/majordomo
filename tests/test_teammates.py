@@ -24,8 +24,10 @@ from majordomo.runtime import build_runtime
 from majordomo.sessions import SessionStore
 from majordomo.teammates import (
     AGENT_CLIS,
+    DOMO_AVATAR,
     AgentStatus,
     detect_agents,
+    ensure_character,
     register_teammate_tools,
     run_count,
     run_teammate,
@@ -78,6 +80,46 @@ def test_invocation_templates() -> None:
         "do it",
         "--yes-always",
     ]
+
+
+# -- faces (the cast portrait Kevin supplied) -------------------------------
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_faces_match_the_cast_portrait_files() -> None:
+    """Every character with an avatar has its face file in the repo.
+
+    The mapping is Kevin's cast portrait: white = Claude, red = Codex,
+    orange = Gemini, teal = Otto, purple = Cursor, blue = Domo.
+    Copilot and Aider are not in the portrait — they keep their
+    initials (avatar None) until their faces arrive.
+    """
+    faced = {spec.key: spec.avatar for spec in AGENT_CLIS.values() if spec.avatar is not None}
+    assert faced == {
+        "claude": "assets/faces/claude.png",
+        "codex": "assets/faces/codex.png",
+        "gemini": "assets/faces/gemini.png",
+        "opencode": "assets/faces/otto.png",
+        "cursor": "assets/faces/cursor.png",
+    }
+    assert AGENT_CLIS["copilot"].avatar is None
+    assert AGENT_CLIS["aider"].avatar is None
+    for avatar in [*faced.values(), DOMO_AVATAR]:
+        assert avatar is not None
+        assert (_REPO_ROOT / avatar).is_file(), f"missing face file: {avatar}"
+    assert (_REPO_ROOT / "assets" / "friends-cast.jpg").is_file()
+
+
+def test_character_card_records_the_avatar(tmp_path: Path) -> None:
+    home = ensure_character(tmp_path / "teammates", AGENT_CLIS["claude"])
+    card = json.loads((home / "character.json").read_text(encoding="utf-8"))
+    assert card["avatar"] == "assets/faces/claude.png"
+
+    home = ensure_character(tmp_path / "teammates", AGENT_CLIS["copilot"])
+    card = json.loads((home / "character.json").read_text(encoding="utf-8"))
+    assert card["avatar"] is None
 
 
 # -- detection -------------------------------------------------------------

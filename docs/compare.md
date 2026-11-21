@@ -73,7 +73,11 @@ repository):
 2. **Characters.** A bot is a *someone* — a name, a role, a home of
    its own with a memory of past runs. Majordomo's version: each
    character keeps `teammates/<name>/` with a character card, a
-   transcript, and a `notes.md`.
+   transcript, and a `notes.md`. Since 0.7.1 the characters also
+   have faces: a cast portrait of the team ("the friends") supplied
+   by Kevin lives at `assets/friends-cast.jpg`, with a cropped face
+   per character under `assets/faces/` — Copilot and Aider aren't
+   in the portrait yet and keep their initial avatars.
 3. **"Needs you / done" notifications.** The agent taps your shoulder
    when something needs you instead of waiting for you to check in.
    Majordomo's version: initiative digests and escalations POSTed to
