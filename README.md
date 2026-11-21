@@ -11,6 +11,11 @@
   <img src="assets/banner.jpg" alt="Majordomo — your self-hosted personal AI agent" width="100%">
 </p>
 <p align="center">
+  <img src="assets/dashboard.png" alt="The Majordomo window — one square: chat text at the top, the robot head below it, the type box under the head, the four read buttons, and the step row" width="88%">
+  <br>
+  <em>The one window, as `majordomo serve` serves it — chat text above the head, the type box below it, everything in one square. A real run on the offline demo provider: with approval ticked, the coffee fact is filed to memory through the real tool loop.</em>
+</p>
+<p align="center">
   <img src="assets/demo.gif" alt="Majordomo at work — checking mail, filing a fact by himself, recalling it in a new session, noticing new mail on his own, and printing a brief" width="88%">
   <br>
   <em>Domo at work — a real run on the built-in offline demo data: he checks mail, files a fact by himself, recalls it in a brand-new session, notices new mail on his own, and prints his brief.</em>
@@ -198,11 +203,6 @@ Domo's face is a little living window in the Pocket Pip style: the robot head fl
 
 **The window now ships in this repo.** Since 0.6.0, `majordomo serve` opens the one window as the web UI itself — one square panel with everything inside it: the living face, the chat window (the real agent loop, not a mock-up), the four reads, and Soul & Memory behind the fingerprint. The Artifact read is a files shelf: every file in the workspace, plus his brand images, listed with its type and size and downloadable in one tap. (A companion dashboard Space in the same style also exists in Domo's household — but the window's home is here, in the package.)
 
-<p align="center">
-  <img src="assets/dashboard.png" alt="The Majordomo window served by the repo itself — one square window: chat text at the top, the robot head below it, the type box under the head, the four read buttons, and the step row" width="72%">
-  <br>
-  <em>The window as `majordomo serve` serves it — a real run on the offline demo provider: the chat text runs above the head, the type box sits below it, and with approval ticked the coffee fact is filed to memory through the real tool loop.</em>
-</p>
 
 ## MCP: plug in any server
 
