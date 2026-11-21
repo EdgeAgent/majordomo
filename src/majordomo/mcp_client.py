@@ -1,8 +1,7 @@
 """An MCP client: Majordomo as a consumer of MCP servers.
 
-Majordomo speaks the Model Context Protocol over stdio — the same wire
-shape Step 3 of the AI Automation series implements
-(``ai-automation-mcp``). It launches a server process, performs the
+Majordomo speaks the Model Context Protocol over stdio. It launches
+a server process, performs the
 ``initialize`` handshake, lists its tools, and re-registers them in the
 agent's own registry, namespaced as ``<server>__<tool>``. A remote
 tool's ``readOnlyHint`` annotation decides whether Majordomo treats it
@@ -13,8 +12,7 @@ Servers are configured in one JSON file::
 
     {
       "servers": {
-        "lead-tools": {"command": "ai-mcp", "args": ["run", "lead-tools"]},
-        "mini-crm":   {"command": "ai-mcp", "args": ["run", "mini-crm"]}
+        "majordomo": {"command": "majordomo", "args": ["mcp-server"]}
       }
     }
 """

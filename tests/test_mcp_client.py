@@ -59,8 +59,8 @@ def test_bad_command_is_an_honest_error() -> None:
 def test_load_config_from_examples() -> None:
     config = Path(__file__).parent.parent / "examples" / "mcp-servers.json"
     servers = load_mcp_config(config)
-    assert set(servers) == {"lead-tools", "business-tools", "mini-crm"}
-    assert servers["lead-tools"]["command"] == "ai-mcp"
+    assert set(servers) == {"majordomo"}
+    assert servers["majordomo"]["command"] == "majordomo"
 
 
 def test_load_config_missing_file(tmp_path: Path) -> None:

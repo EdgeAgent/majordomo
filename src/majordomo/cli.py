@@ -113,6 +113,27 @@ def serve(
     )
 
 
+@app.command("mcp-server")
+def mcp_server(
+    allow_write: bool = typer.Option(
+        False,
+        "--allow-write",
+        help="Also expose acting tools (memory/file writes, documents, reminders).",
+    ),
+) -> None:
+    """Run Majordomo as an MCP server on stdio (read-only by default)."""
+    import os
+
+    from .mcp_server import serve_stdio
+
+    os.environ.pop("MAJORDOMO_MCP_CONFIG", None)  # a server never consumes servers
+    runtime = _runtime()
+    try:
+        serve_stdio(runtime.registry, allow_write=allow_write)
+    finally:
+        runtime.close()
+
+
 @memory_app.command("list")
 def memory_list(kind: str = typer.Option("", help="fact, preference, or note.")) -> None:
     """List everything in long-term memory."""

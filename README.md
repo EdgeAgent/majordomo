@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.svg" alt="Majordomo icon — a gold service bell on navy" width="88" height="88">
+  <img src="assets/icon.png" alt="Majordomo icon — Domo, the little agent, at his desk" width="88" height="88">
 </p>
 
 <h1 align="center">Majordomo</h1>
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/banner.svg" alt="Majordomo — your self-hosted personal AI agent" width="100%">
+  <img src="assets/banner.png" alt="Majordomo — your self-hosted personal AI agent" width="100%">
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@
 
 **Majordomo is a personal AI agent for one person: you.** It runs on your own machine — a laptop, a home server, a spare box in the corner — and it works like a good majordomo should: it remembers your preferences, keeps your schedule, does the research, drafts the documents, and asks before it does anything that matters. No account, no subscription, no cloud holding your data. Your conversations, your memory, and your files live in one folder on your disk, in formats you can open with any text editor.
 
-It talks to a **local model by default** (Ollama), speaks to any OpenAI-compatible API when you give it a key, and — the party trick — it can **consume MCP servers**, so the tools from [Step 3 of the AI Automation series](https://github.com/EdgeAgent/ai-automation-mcp) plug straight into it.
+It talks to a **local model by default** (Ollama), speaks to any OpenAI-compatible API when you give it a key, and — the party trick — it can **consume MCP servers** — any server that speaks the protocol plugs straight into it.
 
 ## Why self-hosted?
 
@@ -43,7 +43,7 @@ Majordomo takes the other side of that trade:
 - **Get documents made**: Word briefs, PowerPoint decks, and Excel sheets, created and read back inside a sandboxed workspace the agent cannot escape.
 - **Set reminders** — one-time or daily/weekly — that fire into your chat inbox on schedule.
 - **Generate images** through a pluggable backend (a placeholder backend ships; live generation uses your own provider key).
-- **Plug in MCP servers** — point Majordomo at a JSON config and every tool those servers expose joins the registry, approval gate included. The example config wires up Step 3's lead tools, business tools, and mini-CRM.
+- **Plug in MCP servers** — point Majordomo at a JSON config and every tool those servers expose joins the registry, approval gate included. The example config points Majordomo at a second Majordomo — it is an MCP server itself (`majordomo mcp-server`).
 
 ## Feature map
 
@@ -145,16 +145,14 @@ majordomo memory forget preference:1
 
 Automatic capture is **off**, permanently, by design. The only write paths are the `memory_remember` tool (approval-gated) and the commands above. If it isn't in the files, Majordomo doesn't remember it.
 
-## MCP: Majordomo eats Step 3
+## MCP: plug in any server
 
-Majordomo is an MCP *client*. Give it a config file (see [`examples/mcp-servers.json`](examples/mcp-servers.json)):
+Majordomo works both sides of MCP. As a *client*, give it a config file (see [`examples/mcp-servers.json`](examples/mcp-servers.json)):
 
 ```json
 {
   "servers": {
-    "lead-tools":     { "command": "ai-mcp", "args": ["run", "lead-tools"] },
-    "business-tools": { "command": "ai-mcp", "args": ["run", "business-tools"] },
-    "mini-crm":       { "command": "ai-mcp", "args": ["run", "mini-crm"] }
+    "majordomo": { "command": "majordomo", "args": ["mcp-server"] }
   }
 }
 ```
@@ -163,7 +161,9 @@ Majordomo is an MCP *client*. Give it a config file (see [`examples/mcp-servers.
 MAJORDOMO_MCP_CONFIG=examples/mcp-servers.json majordomo chat
 ```
 
-Majordomo launches each server over stdio, does the initialize handshake, and registers its tools as `lead-tools__check_lead_list` and friends. A server tool annotated `readOnlyHint` runs free; anything else passes the same approval gate as a built-in acting tool. Any MCP server works — Step 3's are just the ones on the shelf.
+Majordomo launches each server over stdio, does the initialize handshake, and registers its tools as `majordomo__workspace_list` and friends. A server tool annotated `readOnlyHint` runs free; anything else passes the same approval gate as a built-in acting tool. If it speaks MCP, it plugs in.
+
+And as a *server*: `majordomo mcp-server` serves Majordomo's own tools over stdio to any MCP client — another agent can search this one's memory, read its workspace, and use its web tools. The gate holds on this side too: only read-only tools are served unless the operator starts it with `--allow-write`. The example config above points one Majordomo at another; the server side never loads an MCP config itself, so the loop cannot recurse.
 
 ## What runs where
 
@@ -218,9 +218,9 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 ```text
 .
 ├── .github/workflows/ci.yml    # Python matrix tests and package build
-├── assets/                     # Icon, banner, and social preview (SVG)
+├── assets/                     # Icon and banner (PNG) + social preview (SVG)
 ├── docs/                       # Architecture and the extending guide
-├── examples/                   # MCP server config pointing at Step 3's servers
+├── examples/                   # Example MCP server config
 ├── scripts/demo.py             # Standalone demo, no install needed
 ├── src/majordomo/
 │   ├── config.py               # MAJORDOMO_* settings
@@ -252,4 +252,4 @@ Install the development profile, run the checks above, and keep the default inst
 
 ## The series, and the license
 
-Majordomo stands on the Edge Agency AI Automation series: [Step 1 — the starter kit](https://github.com/EdgeAgent/ai-automation-starter) · [Step 2 — agent recipes](https://github.com/EdgeAgent/ai-automation-agents) · [Step 3 — MCP servers and skills](https://github.com/EdgeAgent/ai-automation-mcp). This repository is not published to PyPI; clone it and use the editable install commands above. Released under the [MIT License](LICENSE). Publishing notes (description, topics, social preview) live in [`PUBLISHING.md`](PUBLISHING.md).
+Majordomo stands on the Edge Agency AI Automation series: [Step 1 — the starter kit](https://github.com/EdgeAgent/ai-automation-starter) · [Step 2 — agent recipes](https://github.com/EdgeAgent/ai-automation-agents). This repository is not published to PyPI; clone it and use the editable install commands above. Released under the [MIT License](LICENSE). Publishing notes (description, topics, social preview) live in [`PUBLISHING.md`](PUBLISHING.md).

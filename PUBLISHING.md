@@ -35,12 +35,11 @@ form rejects SVG.
 
 ## About section
 
-- Website: link the series hub — https://github.com/EdgeAgent/ai-automation-mcp
+- Website: https://github.com/EdgeAgent/majordomo
 - Description: the one-liner above.
 
 ## Series cross-links
 
 - Step 1 (foundation kit): https://github.com/EdgeAgent/ai-automation-starter
 - Step 2 (agent recipes): https://github.com/EdgeAgent/ai-automation-agents
-- Step 3 (MCP servers and skills): https://github.com/EdgeAgent/ai-automation-mcp
 - Majordomo (this repo): https://github.com/EdgeAgent/majordomo

@@ -82,6 +82,9 @@ else passes the approval gate. A server that fails to start raises an
 `MCPError` naming the server — check the command on your shell first
 when that happens.
 
-To build your own server, Step 3 of the series
-([ai-automation-mcp](https://github.com/EdgeAgent/ai-automation-mcp))
-is a shelf of them, with a build-your-own guide of its own.
+Majordomo is also a server itself: `majordomo mcp-server` serves its
+own tools over stdio (read-only by default, `--allow-write` for the
+acting tools), and the bundled example config points one Majordomo at
+another. To build your own separate server, start with the MCP
+specification and the official reference servers
+(modelcontextprotocol/servers on GitHub).

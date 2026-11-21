@@ -1,1 +1,10 @@
-{"servers":{"business-tools":{"args":["run","business-tools"],"command":"ai-mcp"},"lead-tools":{"args":["run","lead-tools"],"command":"ai-mcp"},"mini-crm":{"args":["run","mini-crm"],"command":"ai-mcp"}}}
+{
+  "servers": {
+    "majordomo": {
+      "command": "majordomo",
+      "args": [
+        "mcp-server"
+      ]
+    }
+  }
+}
