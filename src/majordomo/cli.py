@@ -2,6 +2,7 @@
 
     majordomo chat        interactive chat (acting tools ask first)
     majordomo ask "..."   one-shot question
+    majordomo providers   every model provider, its key var, the active one
     majordomo memory ...  inspect long-term memory
     majordomo schedule ...  manage reminders
     majordomo serve       the web app (chat page + API)
@@ -27,6 +28,7 @@ from rich.table import Table
 
 from . import __version__
 from .config import Settings
+from .providers import PROVIDER_PRESETS, ProviderError, resolve_model, resolve_provider_name
 from .runtime import Runtime, build_runtime
 from .tools import approve_all, approve_none
 
@@ -51,6 +53,40 @@ def _interactive_approver(name: str, arguments: dict) -> bool:
 def version() -> None:
     """Print the Majordomo version."""
     console.print(f"majordomo {__version__}")
+
+
+@app.command()
+def providers() -> None:
+    """List every model provider, its key variable, and the active one.
+
+    Bring any key you have: set one ``MAJORDOMO_*_API_KEY`` and the
+    matching provider becomes active (``MAJORDOMO_PROVIDER=auto``,
+    the default). Keys themselves are never printed — only whether
+    one is set.
+    """
+    settings = Settings()
+    try:
+        active = resolve_provider_name(settings)
+    except ProviderError as exc:
+        console.print(str(exc), markup=False)
+        raise typer.Exit(code=1) from exc
+    table = Table("Provider", "Key variable", "Default model", "Status")
+    for preset in PROVIDER_PRESETS.values():
+        if preset.key_field:
+            status = "key set" if getattr(settings, preset.key_field) else "no key"
+        elif preset.name == "ollama":
+            status = "local, no key"
+        else:
+            status = "built in"
+        if preset.name == active:
+            status += " · ◀ active"
+        table.add_row(preset.name, preset.key_env or "—", preset.default_model, status)
+    console.print(table)
+    console.print(
+        f"Active: {active} (model {resolve_model(settings, active)}). "
+        "MAJORDOMO_PROVIDER pins a provider; MAJORDOMO_MODEL overrides the model.",
+        markup=False,
+    )
 
 
 @app.command()

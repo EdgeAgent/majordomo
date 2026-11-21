@@ -28,7 +28,7 @@
 
 **Majordomo is a personal AI agent for one person: you.** It runs on your own machine — a laptop, a home server, a spare box in the corner — and it works like a good majordomo should: it remembers your preferences, keeps your schedule, does the research, drafts the documents, and asks before it does anything that matters. No account, no subscription, no cloud holding your data. Your conversations, your memory, and your files live in one folder on your disk, in formats you can open with any text editor.
 
-It talks to a **local model by default** (Ollama), speaks to any OpenAI-compatible API when you give it a key, and — the party trick — it can **consume MCP servers** — any server that speaks the protocol plugs straight into it.
+It talks to **whatever model you give it a key for** — Anthropic, OpenAI, DeepSeek, Gemini, OpenRouter, Groq, Mistral, xAI, or Together — or to a **local model** (Ollama) when you'd rather nothing leave the machine, and — the party trick — it can **consume MCP servers** — any server that speaks the protocol plugs straight into it.
 
 ## Why self-hosted?
 
@@ -68,7 +68,7 @@ The engine's memory is one small JSON file (`initiative.json` in the data direct
 
 | Capability | How it works | Needs |
 | --- | --- | --- |
-| Chat agent loop | Provider protocol with tool calling; sessions persisted per conversation | A model (local Ollama by default) |
+| Chat agent loop | Provider protocol with tool calling; sessions persisted per conversation | Any provider key, or local Ollama |
 | Long-term memory | `facts.md` / `preferences.md` / `notes.md` — plain files, explicit writes only | Nothing |
 | Cross-session recall | Token search over past conversation files | Nothing |
 | Web search + fetch | Injectable backends; live = DuckDuckGo HTML + httpx, tests/demo = fakes | Network for live use |
@@ -205,7 +205,31 @@ One process does everything; the **data directory** (default `~/.majordomo`, or 
     └── images/      generated images land here
 ```
 
-The **provider** is the only piece that may leave the machine: Ollama stays local; an OpenAI-compatible provider sends your prompts to that endpoint, with your key. Web search/fetch reach the network only when you ask a question that needs them. Architecture details live in [`docs/architecture.md`](docs/architecture.md); adding tools, providers, and MCP servers is covered in [`docs/extending.md`](docs/extending.md).
+The **provider** is the only piece that may leave the machine: Ollama stays local; a hosted provider sends your prompts to that provider's endpoint, with your key. Web search/fetch reach the network only when you ask a question that needs them. Architecture details live in [`docs/architecture.md`](docs/architecture.md); adding tools, providers, and MCP servers is covered in [`docs/extending.md`](docs/extending.md).
+
+## Bring your own key
+
+Majordomo is not married to one model company. Give it a key for **any** major provider and it uses that provider's model — just set the one variable:
+
+| Provider | Get a key at | Variable | Default model |
+| --- | --- | --- | --- |
+| Anthropic | console.anthropic.com | `MAJORDOMO_ANTHROPIC_API_KEY` | `claude-sonnet-4-5` |
+| OpenAI | platform.openai.com | `MAJORDOMO_OPENAI_API_KEY` | `gpt-4o` |
+| DeepSeek | platform.deepseek.com | `MAJORDOMO_DEEPSEEK_API_KEY` | `deepseek-chat` |
+| Gemini | Google AI Studio (aistudio.google.com) | `MAJORDOMO_GEMINI_API_KEY` | `gemini-2.5-flash` |
+| OpenRouter | openrouter.ai | `MAJORDOMO_OPENROUTER_API_KEY` | `openai/gpt-4o` |
+| Groq | console.groq.com | `MAJORDOMO_GROQ_API_KEY` | `llama-3.3-70b-versatile` |
+| Mistral | console.mistral.ai | `MAJORDOMO_MISTRAL_API_KEY` | `mistral-large-latest` |
+| xAI | console.x.ai | `MAJORDOMO_XAI_API_KEY` | `grok-4` |
+| Together | api.together.ai | `MAJORDOMO_TOGETHER_API_KEY` | `meta-llama/Llama-3.3-70B-Instruct-Turbo` |
+| Ollama | ollama.com — runs locally, no key | — | `llama3.1` |
+| Fake | built in — the offline demo provider | — | (scripted) |
+
+**Auto-detect is the default** (`MAJORDOMO_PROVIDER=auto`): the first key that is set wins, in the table's order — Anthropic, OpenAI, DeepSeek, Gemini, OpenRouter, Groq, Mistral, xAI, Together. With no key set, a configured local Ollama is used; with neither, Majordomo runs on the fake provider and says so. Pin one provider with `MAJORDOMO_PROVIDER=deepseek` (any table name), and override any default model with `MAJORDOMO_MODEL` (e.g. `MAJORDOMO_MODEL=claude-opus-4-5`).
+
+Run `majordomo providers` to see every provider, the variable that feeds it, and which one is active under your current settings. Keys are never printed or logged — the listing shows only "key set" / "no key", and it is your key and your bill with whichever provider you choose.
+
+Under the hood there are two adapters: one parameterized OpenAI-compatible adapter serves every compatible endpoint (OpenAI, DeepSeek, Gemini, OpenRouter, Groq, Mistral, xAI, Together), and a native adapter speaks Anthropic's Messages API, whose wire shape genuinely differs.
 
 ## Configuration
 
@@ -214,9 +238,10 @@ Everything is an environment variable (or a `.env` file) — see [`.env.example`
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `MAJORDOMO_DATA_DIR` | `~/.majordomo` | Where memory, sessions, schedules, and the workspace live |
-| `MAJORDOMO_PROVIDER` | `ollama` | `ollama`, `openai`, or `fake` |
+| `MAJORDOMO_PROVIDER` | `auto` | `auto`, or any provider name from the table above, or `ollama` / `fake` |
+| `MAJORDOMO_MODEL` | per provider | Overrides the active provider's default model |
 | `MAJORDOMO_OLLAMA_BASE_URL` / `MAJORDOMO_OLLAMA_MODEL` | `http://localhost:11434` / `llama3.1` | Local model endpoint and model |
-| `MAJORDOMO_OPENAI_API_KEY` | — | Your key for the OpenAI-compatible provider and live images |
+| `MAJORDOMO_*_API_KEY` | — | One per hosted provider — see [Bring your own key](#bring-your-own-key). (`MAJORDOMO_OPENAI_API_KEY` also feeds live images.) |
 | `MAJORDOMO_IMAGE_BACKEND` | `fake` | `fake` (placeholder PNG) or `openai` |
 | `MAJORDOMO_MCP_CONFIG` | — | Path to an MCP servers JSON file |
 | `MAJORDOMO_HOST` / `MAJORDOMO_PORT` | `127.0.0.1` / `8080` | Web app bind |
@@ -252,7 +277,7 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 ├── scripts/demo.py             # Standalone demo, no install needed
 ├── src/majordomo/
 │   ├── config.py               # MAJORDOMO_* settings
-│   ├── providers.py            # Ollama / OpenAI-compatible / fake providers
+│   ├── providers.py            # Provider presets: Anthropic, OpenAI, DeepSeek, Gemini, OpenRouter, Groq, Mistral, xAI, Together, Ollama, fake
 │   ├── agent.py                # The chat loop + approval gate
 │   ├── tools.py                # The tool registry
 │   ├── coretools.py            # Memory + recall tools

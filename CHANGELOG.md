@@ -8,6 +8,29 @@ follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Any key, any model: a provider preset registry (`PROVIDER_PRESETS`
+  in `src/majordomo/providers.py`) covering Anthropic, OpenAI,
+  DeepSeek, Gemini, OpenRouter, Groq, Mistral, xAI, and Together,
+  plus the local Ollama and the offline fake. Set one
+  `MAJORDOMO_<NAME>_API_KEY` and that provider's model answers.
+  The OpenAI-compatible adapter is now parameterized (name, base
+  URL, model, key) and serves every compatible endpoint; a new
+  native `AnthropicProvider` speaks the Messages API — top-level
+  system prompt, `tool_use` / `tool_result` blocks, `x-api-key` +
+  `anthropic-version` headers.
+- Provider auto-detection: `MAJORDOMO_PROVIDER` now defaults to
+  `auto` — the first set hosted key wins (Anthropic → OpenAI →
+  DeepSeek → Gemini → OpenRouter → Groq → Mistral → xAI →
+  Together), then an explicitly configured Ollama, then the fake.
+  `MAJORDOMO_MODEL` overrides any preset's default model; the
+  legacy `MAJORDOMO_OPENAI_MODEL` / `MAJORDOMO_OPENAI_BASE_URL`
+  settings still win for OpenAI when set explicitly. An unknown
+  provider name is now a clean `ProviderError`, not a silent
+  fallthrough to Ollama. Keys are never logged or printed:
+  provider reprs show only `<set>` / `<unset>`.
+- `majordomo providers`: lists every provider, the environment
+  variable that feeds it, its default model, whether a key is set,
+  and which provider is active under the current settings.
 - Initiative engine (`src/majordomo/initiative.py`): run by the
   daemon and the web app tick alongside reminder firing. A mail watch
   digests each never-before-seen message into the inbox session as a

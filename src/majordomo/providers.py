@@ -5,13 +5,25 @@ returning text and/or tool calls. Messages are plain dicts in the
 OpenAI shape (``role`` / ``content`` / ``tool_calls`` / ``tool_call_id``);
 each adapter translates for its own wire format.
 
-Three adapters ship:
+Bring any key you have. A preset registry (:data:`PROVIDER_PRESETS`)
+maps each provider name to its adapter, endpoint, key setting, and
+default model:
 
-- :class:`OllamaProvider` — a local Ollama server (the default; no key).
-- :class:`OpenAIProvider` — any OpenAI-compatible chat-completions API.
+- :class:`OpenAIProvider` — one parameterized adapter for every
+  OpenAI-compatible chat-completions API: OpenAI, DeepSeek, Gemini,
+  OpenRouter, Groq, Mistral, xAI, and Together.
+- :class:`AnthropicProvider` — Anthropic's Messages API, whose wire
+  shape genuinely differs (top-level system prompt, ``tool_use`` /
+  ``tool_result`` blocks), so it gets its own adapter.
+- :class:`OllamaProvider` — a local Ollama server (no key).
 - :class:`FakeProvider` — scripted and deterministic. It powers the demo
   and the tests, and it is honest about what it is: connect a real
   provider for real answers.
+
+With ``MAJORDOMO_PROVIDER=auto`` (the default), the first hosted key
+that is set wins — see :data:`AUTO_PRIORITY` — then a configured local
+Ollama, then the fake. ``MAJORDOMO_MODEL`` overrides any preset's
+default model. Keys are never logged or printed.
 """
 
 from __future__ import annotations
@@ -61,6 +73,185 @@ class Provider(Protocol):
 
 def _tool_names(tools: list[ToolSchema]) -> set[str]:
     return {t.get("function", {}).get("name", "") for t in tools}
+
+
+@dataclass(frozen=True)
+class ProviderPreset:
+    """One selectable provider: adapter, endpoint, key, default model."""
+
+    name: str
+    adapter: str  # "openai-compatible" | "anthropic" | "ollama" | "fake"
+    base_url: str
+    default_model: str
+    key_field: str | None  # Settings attribute holding the API key
+    key_env: str | None  # environment variable that feeds key_field
+    console: str  # where the user gets a key ("" when no key exists)
+
+
+# Every provider Majordomo knows, in display order. Most hosted APIs
+# speak the OpenAI chat-completions shape, so they share one adapter;
+# only the endpoint, key, and default model differ.
+PROVIDER_PRESETS: dict[str, ProviderPreset] = {
+    preset.name: preset
+    for preset in (
+        ProviderPreset(
+            "anthropic",
+            "anthropic",
+            "https://api.anthropic.com",
+            "claude-sonnet-4-5",
+            "anthropic_api_key",
+            "MAJORDOMO_ANTHROPIC_API_KEY",
+            "console.anthropic.com",
+        ),
+        ProviderPreset(
+            "openai",
+            "openai-compatible",
+            "https://api.openai.com/v1",
+            "gpt-4o",
+            "openai_api_key",
+            "MAJORDOMO_OPENAI_API_KEY",
+            "platform.openai.com",
+        ),
+        ProviderPreset(
+            "deepseek",
+            "openai-compatible",
+            "https://api.deepseek.com",
+            "deepseek-chat",
+            "deepseek_api_key",
+            "MAJORDOMO_DEEPSEEK_API_KEY",
+            "platform.deepseek.com",
+        ),
+        ProviderPreset(
+            "gemini",
+            "openai-compatible",
+            "https://generativelanguage.googleapis.com/v1beta/openai/",
+            "gemini-2.5-flash",
+            "gemini_api_key",
+            "MAJORDOMO_GEMINI_API_KEY",
+            "Google AI Studio (aistudio.google.com)",
+        ),
+        ProviderPreset(
+            "openrouter",
+            "openai-compatible",
+            "https://openrouter.ai/api/v1",
+            "openai/gpt-4o",
+            "openrouter_api_key",
+            "MAJORDOMO_OPENROUTER_API_KEY",
+            "openrouter.ai",
+        ),
+        ProviderPreset(
+            "groq",
+            "openai-compatible",
+            "https://api.groq.com/openai/v1",
+            "llama-3.3-70b-versatile",
+            "groq_api_key",
+            "MAJORDOMO_GROQ_API_KEY",
+            "console.groq.com",
+        ),
+        ProviderPreset(
+            "mistral",
+            "openai-compatible",
+            "https://api.mistral.ai/v1",
+            "mistral-large-latest",
+            "mistral_api_key",
+            "MAJORDOMO_MISTRAL_API_KEY",
+            "console.mistral.ai",
+        ),
+        ProviderPreset(
+            "xai",
+            "openai-compatible",
+            "https://api.x.ai/v1",
+            "grok-4",
+            "xai_api_key",
+            "MAJORDOMO_XAI_API_KEY",
+            "console.x.ai",
+        ),
+        ProviderPreset(
+            "together",
+            "openai-compatible",
+            "https://api.together.xyz/v1",
+            "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "together_api_key",
+            "MAJORDOMO_TOGETHER_API_KEY",
+            "api.together.ai",
+        ),
+        ProviderPreset(
+            "ollama",
+            "ollama",
+            "http://localhost:11434",
+            "llama3.1",
+            None,
+            None,
+            "ollama.com — runs locally, no key",
+        ),
+        ProviderPreset(
+            "fake",
+            "fake",
+            "",
+            "(scripted)",
+            None,
+            None,
+            "built in — the offline demo provider",
+        ),
+    )
+}
+
+# Auto-detection order: the first hosted provider whose key is set
+# becomes the active one.
+AUTO_PRIORITY: tuple[str, ...] = (
+    "anthropic",
+    "openai",
+    "deepseek",
+    "gemini",
+    "openrouter",
+    "groq",
+    "mistral",
+    "xai",
+    "together",
+)
+
+
+def resolve_provider_name(settings: Any) -> str:
+    """The provider that would be active under these settings.
+
+    An explicit ``MAJORDOMO_PROVIDER`` wins. ``auto`` walks
+    :data:`AUTO_PRIORITY` for the first set key, then falls back to a
+    *configured* Ollama (its endpoint or model was set explicitly —
+    the defaults alone don't count), then the offline fake.
+    """
+    kind = str(getattr(settings, "provider", "auto") or "auto").lower().strip()
+    if kind != "auto":
+        if kind in PROVIDER_PRESETS:
+            return kind
+        raise ProviderError(
+            f"Unknown provider {kind!r}. Choose one of: {', '.join([*PROVIDER_PRESETS, 'auto'])}."
+        )
+    for name in AUTO_PRIORITY:
+        preset = PROVIDER_PRESETS[name]
+        if preset.key_field and getattr(settings, preset.key_field, None):
+            return name
+    fields_set = getattr(settings, "model_fields_set", set())
+    if "ollama_base_url" in fields_set or "ollama_model" in fields_set:
+        return "ollama"
+    return "fake"
+
+
+def resolve_model(settings: Any, name: str) -> str:
+    """The model that would be used for provider ``name``.
+
+    ``MAJORDOMO_MODEL`` overrides everything; the legacy per-provider
+    model settings still win for their own provider when they were set
+    explicitly; otherwise the preset's default model.
+    """
+    override = getattr(settings, "model", None)
+    if override:
+        return str(override)
+    fields_set = getattr(settings, "model_fields_set", set())
+    if name == "ollama":
+        return str(settings.ollama_model)
+    if name == "openai" and "openai_model" in fields_set:
+        return str(settings.openai_model)
+    return PROVIDER_PRESETS[name].default_model
 
 
 class FakeProvider:
@@ -378,7 +569,12 @@ class OllamaProvider:
 
 
 class OpenAIProvider:
-    """Talk to any OpenAI-compatible chat-completions endpoint."""
+    """Talk to any OpenAI-compatible chat-completions endpoint.
+
+    One adapter serves every compatible preset — OpenAI, DeepSeek,
+    Gemini, OpenRouter, Groq, Mistral, xAI, Together — parameterized
+    by ``name``, ``base_url``, ``model``, and ``api_key``.
+    """
 
     name = "openai"
 
@@ -388,12 +584,22 @@ class OpenAIProvider:
         model: str = "gpt-4o-mini",
         api_key: str | None = None,
         client: httpx.Client | None = None,
+        name: str = "openai",
     ) -> None:
+        self.name = name
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.api_key = api_key
         # Lazy: constructing a provider never builds an HTTP client.
         self._client = client
+
+    def __repr__(self) -> str:
+        # The key is never part of any debug output — only set/unset.
+        state = "<set>" if self.api_key else "<unset>"
+        return (
+            f"OpenAIProvider(name={self.name!r}, model={self.model!r}, "
+            f"base_url={self.base_url!r}, api_key={state})"
+        )
 
     def _get_client(self) -> httpx.Client:
         if self._client is None:
@@ -433,7 +639,7 @@ class OpenAIProvider:
         try:
             data = self._post(payload)
         except httpx.HTTPError as exc:
-            raise ProviderError(f"OpenAI-compatible endpoint failed ({exc}).") from exc
+            raise ProviderError(f"The {self.name} endpoint failed ({exc}).") from exc
         choice = (data.get("choices") or [{}])[0]
         message = choice.get("message", {})
         calls = []
@@ -451,15 +657,183 @@ class OpenAIProvider:
         return ProviderResponse(text=str(message.get("content") or ""), tool_calls=calls)
 
 
-def build_provider(settings: Any) -> Provider:
-    """Construct the configured provider from settings."""
-    kind = str(getattr(settings, "provider", "ollama")).lower()
-    if kind == "fake":
-        return FakeProvider()
-    if kind == "openai":
-        return OpenAIProvider(
-            base_url=settings.openai_base_url,
-            model=settings.openai_model,
-            api_key=settings.openai_api_key,
+def _anthropic_tool(tool: ToolSchema) -> dict[str, Any]:
+    """Translate one internal (OpenAI-shaped) tool schema for Anthropic."""
+    function = tool.get("function", tool)
+    return {
+        "name": function.get("name", ""),
+        "description": function.get("description", ""),
+        "input_schema": function.get("parameters") or {"type": "object", "properties": {}},
+    }
+
+
+class AnthropicProvider:
+    """Talk to Anthropic's Messages API.
+
+    The wire shape differs from the OpenAI one in three places: the
+    system prompt is a top-level field (not a message), tools are
+    ``{name, description, input_schema}``, and tool calls / results
+    travel as ``tool_use`` / ``tool_result`` content blocks — results
+    ride in a *user* message, and parallel results share one.
+    """
+
+    name = "anthropic"
+    ANTHROPIC_VERSION = "2023-06-01"
+
+    def __init__(
+        self,
+        base_url: str = "https://api.anthropic.com",
+        model: str = "claude-sonnet-4-5",
+        api_key: str | None = None,
+        max_tokens: int = 4096,
+        client: httpx.Client | None = None,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.api_key = api_key
+        self.max_tokens = max_tokens
+        # Lazy: constructing a provider never builds an HTTP client.
+        self._client = client
+
+    def __repr__(self) -> str:
+        # The key is never part of any debug output — only set/unset.
+        state = "<set>" if self.api_key else "<unset>"
+        return (
+            f"AnthropicProvider(model={self.model!r}, base_url={self.base_url!r}, api_key={state})"
         )
-    return OllamaProvider(base_url=settings.ollama_base_url, model=settings.ollama_model)
+
+    def _get_client(self) -> httpx.Client:
+        if self._client is None:
+            self._client = httpx.Client(timeout=120.0)
+        return self._client
+
+    @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=0.5, max=4), reraise=True)
+    def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
+        headers = {
+            "anthropic-version": self.ANTHROPIC_VERSION,
+            "content-type": "application/json",
+        }
+        if self.api_key:
+            headers["x-api-key"] = self.api_key
+        response = self._get_client().post(
+            f"{self.base_url}/v1/messages", json=payload, headers=headers
+        )
+        response.raise_for_status()
+        data: dict[str, Any] = response.json()
+        return data
+
+    def _wire_messages(self, messages: list[Message]) -> tuple[str, list[dict[str, Any]]]:
+        """Split the internal history into (system prompt, wire messages)."""
+        system_parts: list[str] = []
+        wire: list[dict[str, Any]] = []
+        pending_results: list[dict[str, Any]] = []
+
+        def flush_results() -> None:
+            if pending_results:
+                wire.append({"role": "user", "content": list(pending_results)})
+                pending_results.clear()
+
+        def append_user(content: Any) -> None:
+            # Anthropic wants alternating roles; merge into a trailing
+            # user message instead of emitting two in a row.
+            if wire and wire[-1].get("role") == "user":
+                previous = wire[-1]["content"]
+                merged: list[Any] = (
+                    list(previous)
+                    if isinstance(previous, list)
+                    else [{"type": "text", "text": previous}]
+                )
+                merged.extend(
+                    content if isinstance(content, list) else [{"type": "text", "text": content}]
+                )
+                wire[-1] = {"role": "user", "content": merged}
+            else:
+                wire.append({"role": "user", "content": content})
+
+        for message in messages:
+            role = message.get("role")
+            if role == "system":
+                text = str(message.get("content", "")).strip()
+                if text:
+                    system_parts.append(text)
+            elif role == "tool":
+                pending_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": message.get("tool_call_id", ""),
+                        "content": str(message.get("content", "")),
+                    }
+                )
+            elif role == "assistant":
+                flush_results()
+                blocks: list[dict[str, Any]] = []
+                text = str(message.get("content") or "")
+                if text:
+                    blocks.append({"type": "text", "text": text})
+                for call in message.get("tool_calls") or []:
+                    blocks.append(
+                        {
+                            "type": "tool_use",
+                            "id": call["id"],
+                            "name": call["name"],
+                            "input": call.get("arguments") or {},
+                        }
+                    )
+                wire.append({"role": "assistant", "content": blocks if blocks else text})
+            else:  # user
+                flush_results()
+                append_user(str(message.get("content", "")))
+        flush_results()
+        return "\n\n".join(system_parts), wire
+
+    def chat(self, messages: list[Message], tools: list[ToolSchema]) -> ProviderResponse:
+        system, wire = self._wire_messages(messages)
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": self.max_tokens,
+            "messages": wire,
+        }
+        if system:
+            payload["system"] = system
+        if tools:
+            payload["tools"] = [_anthropic_tool(tool) for tool in tools]
+        try:
+            data = self._post(payload)
+        except httpx.HTTPError as exc:
+            raise ProviderError(f"The anthropic endpoint failed ({exc}).") from exc
+        text_parts: list[str] = []
+        calls: list[ToolCall] = []
+        for block in data.get("content") or []:
+            if block.get("type") == "text":
+                text_parts.append(str(block.get("text", "")))
+            elif block.get("type") == "tool_use":
+                calls.append(
+                    ToolCall(
+                        id=str(block.get("id", "")),
+                        name=str(block.get("name", "")),
+                        arguments=block.get("input") or {},
+                    )
+                )
+        return ProviderResponse(text="".join(text_parts), tool_calls=calls)
+
+
+def build_provider(settings: Any) -> Provider:
+    """Construct the provider the settings select (see the presets)."""
+    name = resolve_provider_name(settings)
+    if name == "fake":
+        return FakeProvider()
+    preset = PROVIDER_PRESETS[name]
+    if preset.adapter == "ollama":
+        return OllamaProvider(
+            base_url=settings.ollama_base_url,
+            model=resolve_model(settings, name),
+        )
+    key = getattr(settings, preset.key_field, None) if preset.key_field else None
+    model = resolve_model(settings, name)
+    if preset.adapter == "anthropic":
+        return AnthropicProvider(base_url=preset.base_url, model=model, api_key=key)
+    base_url = preset.base_url
+    if name == "openai" and "openai_base_url" in getattr(settings, "model_fields_set", set()):
+        # A legacy explicit endpoint (e.g. a local proxy) still wins.
+        base_url = settings.openai_base_url
+    return OpenAIProvider(name=name, base_url=base_url, model=model, api_key=key)
