@@ -32,6 +32,8 @@ what actually happened.
 | `mailtools.py` | Mail behind injectable backends (IMAP/SMTP, fake) |
 | `autocapture.py` | Opt-in self-filing memory extractor |
 | `initiative.py` | Mail watch + escalation, run per tick |
+| `teammates.py` | The agent-CLI bridge: character registry, PATH detection, timed subprocess runs, transcripts + notes |
+| `notify.py` | Outbound webhook notifications (best effort, failures swallowed) |
 | `brief.py` | The deterministic morning brief |
 | `goals.py` | Goals + next moves, persisted in `goals.json` |
 | `mcp_server.py` | Majordomo's own tools served over stdio MCP |
@@ -103,6 +105,37 @@ and advance by whole intervals until their next due time is in the
 future. Two callers fire it: `majordomo schedule run-due` (cron-shaped)
 and the web app's background tick, which appends fired reminders to the
 `inbox` session.
+
+## Teammates
+
+`teammates.py` is a bridge to the coding-agent CLIs installed on the
+machine (Claude Code, Codex, Gemini CLI, OpenCode, Cursor, Copilot,
+Aider). Each known CLI is a `AgentCLI` registry entry — a character
+(display name, role, avatar initial/colour), a binary name, and a
+non-interactive argv template with a `{task}` placeholder. Detection
+is `shutil.which`; a run is one `subprocess.run` (never a shell) with
+the task as a single argument, the workspace as cwd, captured output
+truncated to its last ~8,000 characters, and a hard timeout that
+kills the process. Every run is recorded in the character's home
+(`teammates/<slug>/`: `character.json`, `transcript.jsonl`,
+`notes.md`).
+
+The bridge surfaces to the agent as exactly one tool,
+`delegate_task`, classified **acting** — so the approval gate covers
+it with no special cases. Registration is conditional (see
+`runtime.py`): teammates enabled, and a CLI detected or teammates
+explicitly switched on. The teammates run under their own logins;
+Majordomo passes no credentials and sets no environment for them.
+
+## Notifications
+
+`notify.py` is the one outbound channel: a JSON POST
+(`{"title", "body", "source": "majordomo"}`) to the configured
+webhook, best effort. The initiative engine calls it (through an
+injected `notify_fn`) for new-mail digests and reminder escalations;
+the daemon and the web app tick both inherit that wiring from the
+runtime. Nothing listens on the other side — notifications are out
+only.
 
 ## MCP client
 

@@ -316,7 +316,7 @@ class FakeProvider:
                 f'You said: "{user_text}" — I\'m the built-in fake provider, so this is a '
                 "canned reply. Connect Ollama or set any provider key for real "
                 "answers; ask me to remember, search, fetch, write, schedule, check mail, "
-                "brief you, or draw and I'll use the tools instead."
+                "brief you, delegate to a teammate, or draw and I'll use the tools instead."
             )
         )
 
@@ -401,6 +401,17 @@ class FakeProvider:
     def _intent(self, text: str) -> tuple[str, dict[str, Any]] | None:
         lowered = text.lower()
         url_match = re.search(r"https?://\S+", text)
+
+        # Delegation: "delegate to claude: <task>" or "ask codex to
+        # <task>" hands the work to a teammate character. Checked
+        # first — it is the most explicit phrasing there is.
+        delegate = re.search(
+            r"(?is)^\s*(?:delegate to|ask)\s+([a-z][\w-]*)\s*(?::|\bto\b)\s*(.+)$", text
+        )
+        if delegate and delegate.group(1).lower() != "me":
+            task = delegate.group(2).strip()
+            if task:
+                return "delegate_task", {"agent": delegate.group(1).lower(), "task": task}
 
         if "remind" in lowered:
             numbers = re.findall(r"\d+", text)

@@ -3,6 +3,9 @@
     majordomo chat        interactive chat (acting tools ask first)
     majordomo ask "..."   one-shot question
     majordomo providers   every model provider, its key var, the active one
+    majordomo agents      the teammate characters: who is installed
+    majordomo team        the whole cast, chief of staff first
+    majordomo notify      send one test notification to the webhook
     majordomo self        the self files: soul, identity, user, memory
     majordomo memory ...  inspect long-term memory
     majordomo schedule ...  manage reminders
@@ -29,9 +32,11 @@ from rich.table import Table
 
 from . import __version__
 from .config import Settings
+from .notify import send_notification
 from .providers import PROVIDER_PRESETS, ProviderError, resolve_model, resolve_provider_name
 from .runtime import Runtime, build_runtime
 from .self_files import SelfStore
+from .teammates import AGENT_CLIS, detect_agents, run_count
 from .tools import approve_all, approve_none
 
 app = typer.Typer(help="Majordomo — your self-hosted personal AI agent.")
@@ -116,6 +121,81 @@ def self_command() -> None:
     else:
         console.print("\nSOUL.md:\n", markup=False)
         console.print(soul, markup=False)
+
+
+@app.command()
+def agents() -> None:
+    """List the teammate characters and who is installed.
+
+    Teammates are the coding-agent CLIs on this machine — Claude
+    Code, Codex, Gemini CLI, OpenCode, Cursor, Copilot, Aider — each
+    a named character Majordomo can delegate coding tasks to with the
+    acting ``delegate_task`` tool. Detection is a PATH lookup only;
+    nothing is launched. Runs counts come from each character's
+    transcript in the data directory.
+    """
+    settings = Settings()
+    table = Table("Character", "Role", "Agent CLI", "Status", "Runs")
+    for status in detect_agents():
+        spec = status.spec
+        runs = run_count(settings.teammates_dir, spec)
+        table.add_row(
+            f"{spec.initial} · {spec.display_name}",
+            spec.role,
+            spec.binary + (" (experimental)" if spec.experimental else ""),
+            status.path if status.available else "not installed",
+            str(runs),
+        )
+    console.print(table)
+    if not settings.teammates:
+        console.print(
+            "Teammates are switched off (MAJORDOMO_TEAMMATES=off) — "
+            "the delegate_task tool is not registered.",
+            markup=False,
+        )
+
+
+@app.command()
+def team() -> None:
+    """Print the whole cast: Domo, chief of staff, and his teammates."""
+    console.print(
+        "[bold]Majordomo (Domo)[/bold] — chief of staff. He remembers, schedules, "
+        "researches, asks before acting — and delegates the coding."
+    )
+    table = Table("Character", "Who they are", "Runs on")
+    detected = {status.spec.key: status for status in detect_agents()}
+    for spec in AGENT_CLIS.values():
+        status = detected[spec.key]
+        runs_on = spec.binary + ("" if status.available else " (not installed here)")
+        table.add_row(spec.display_name, spec.role, runs_on)
+    console.print(table)
+    console.print(
+        "Teammates run under their own logins and subscriptions — "
+        "Majordomo never sees their credentials.",
+        markup=False,
+    )
+
+
+@app.command()
+def notify(title: str, body: str) -> None:
+    """Send one notification to the configured webhook.
+
+    Uses ``MAJORDOMO_NOTIFY_WEBHOOK``. The exit code is honest: 1
+    when no webhook is configured or the send fails, 0 when the
+    receiver answered 2xx.
+    """
+    settings = Settings()
+    if not settings.notify_webhook:
+        console.print(
+            "MAJORDOMO_NOTIFY_WEBHOOK is not set — notifications are off.",
+            markup=False,
+        )
+        raise typer.Exit(code=1)
+    if send_notification(title, body, settings.notify_webhook):
+        console.print("Notification sent.", markup=False)
+    else:
+        console.print("Notification failed — the webhook did not accept it.", markup=False)
+        raise typer.Exit(code=1)
 
 
 @app.command()

@@ -4,6 +4,72 @@ All notable changes to Majordomo are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] — 2026-11-21
+
+### Added
+
+- **Teammates: your agent CLIs, as characters.** The coding-agent
+  CLIs installed on the machine — Claude Code, Codex, Gemini CLI,
+  OpenCode, Cursor, Copilot, Aider — become named characters with a
+  role each (Claude the senior engineer, Codex the fast prototyper,
+  Gemini the researcher, Otto the open-source all-rounder, Cursor
+  the editor, Copilot the pair programmer, Aider the focused
+  patcher), while Domo stays chief of staff. New module
+  `src/majordomo/teammates.py`: detection is `shutil.which` on PATH;
+  a run is the CLI's non-interactive invocation (`claude -p`,
+  `codex exec`, `gemini -p`, `opencode run`, `cursor-agent -p`,
+  `copilot -p`, `aider --message … --yes-always` — Aider's entry is
+  marked experimental) with the task as a single argument, never a
+  shell, in the sandboxed workspace, output captured (tail ~8,000
+  chars), and a hard timeout that kills the process. Teammates run
+  under their own logins and subscriptions — Majordomo never sees
+  their credentials.
+- **The `delegate_task` tool (acting).** Hands a task to a teammate
+  and returns its output into the conversation. It passes the
+  approval gate like every acting tool — a declined delegation runs
+  nothing, and the tests prove the binary is never executed. The
+  tool is registered when teammates are enabled
+  (`MAJORDOMO_TEAMMATES`, default on; `off` removes it) and at least
+  one known CLI is detected, or when teammates were explicitly
+  switched on. Per-run timeout: `MAJORDOMO_TEAMMATE_TIMEOUT`
+  (default 600s). The fake provider understands "delegate to
+  <agent>: …" and "ask <agent> to …".
+- **Per-character persistence.** Each character keeps a home in
+  `teammates/<slug>/` in the data directory: a `character.json` card
+  (name, agent, role, created date), a `transcript.jsonl` with one
+  entry per run (timestamp, agent, task, exit code, output), and a
+  `notes.md` each run appends a one-line outcome to — per-bot
+  memory in plain files. Names resolve by registry key or display
+  name ("Otto" works).
+- **`majordomo agents` and `majordomo team`.** `agents` lists the
+  characters with role, binary, installed status, and run counts
+  from their transcripts; `team` prints the whole roster, chief of
+  staff first.
+- **Notifications ("needs you / done").** New module
+  `src/majordomo/notify.py`: with `MAJORDOMO_NOTIFY_WEBHOOK` set,
+  the initiative engine's new-mail digests and unacknowledged-
+  reminder escalations are also POSTed to the webhook as
+  `{"title", "body", "source": "majordomo"}` — a shape that works
+  with ntfy-style servers and generic receivers. Outbound only,
+  best effort (failures are logged and swallowed; a tick can never
+  be broken by a dead webhook), off when unset. The daemon and the
+  web app tick both inherit the wiring. `majordomo notify "title"
+  "body"` sends a test notification and reports honestly (exit 1
+  when unset or failed).
+- **Repository presentation.** The README is restructured:
+  a "Why Majordomo" bullet section, a "Meet the team" cast table,
+  an honest "How it compares" table (Majordomo vs Codync vs hosted
+  bot apps — including Majordomo's losses: no native apps, no group
+  chat, no voice), and an FAQ (including the honest Docker answer:
+  the image is not yet verified on a Docker machine). New
+  `docs/compare.md` carries the long comparison and a "What we
+  borrowed from Codync, with credit" note — the teammates,
+  characters, and notifications patterns, re-implemented clean-room
+  from the ideas, not the (Rust) code.
+- Version 0.7.0 (package, `__version__`, CLI version output, MCP
+  client info — the client now reads `__version__` instead of a
+  hardcoded copy).
+
 ## [0.6.0] — 2026-11-21
 
 ### Added

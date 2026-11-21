@@ -35,16 +35,51 @@
 
 It talks to **whatever model you give it a key for** — Anthropic, OpenAI, DeepSeek, Gemini, OpenRouter, Groq, Mistral, xAI, or Together — or to a **local model** (Ollama) when you'd rather nothing leave the machine, and — the party trick — it can **consume MCP servers** — any server that speaks the protocol plugs straight into it.
 
-## Why self-hosted?
+## Why Majordomo
 
-The hosted personal agents are genuinely impressive, and they all share one property: *your life runs through somebody else's computer.* Your preferences, your half-finished thoughts, your 2 a.m. questions — logged on a server you don't control, under terms that can change.
+The hosted personal agents are genuinely impressive, and they all share one property: *your life runs through somebody else's computer.* Your preferences, your half-finished thoughts, your 2 a.m. questions — logged on a server you don't control, under terms that can change. Majordomo takes the other side of that trade:
 
-Majordomo takes the other side of that trade:
+- **Self-hosted, single-user.** One process, one folder, on a machine you control. No account, no subscription, no cloud holding your data. It stops when you stop it.
+- **Any key, any model — or your own agent subscriptions.** Bring a key for any major provider (or run a local model with Ollama), *and* delegate coding work to the agent CLIs you already pay for — Claude Code, Codex, Gemini CLI and friends — through [the team](#meet-the-team).
+- **An approval gate on everything that acts.** Anything that writes, creates, schedules, sends, or runs an external program asks first. Looking is free; acting is permitted.
+- **Memory in plain files you can read.** Your memory is a folder of Markdown files. Read it, edit it, back it up, delete it. If Majordomo remembers something wrong, you can fix it with a text editor — try that with a cloud profile.
+- **MCP both ways.** Plug any MCP server into Majordomo, and Majordomo itself serves its tools over MCP to other agents.
+- **Free and open source.** MIT-licensed, no paid tier, no telemetry. It never phones home.
 
-- **Your memory is a folder of Markdown files.** Read it, edit it, back it up, delete it. If Majordomo remembers something wrong, you can fix it with a text editor — try that with a cloud profile.
-- **Your model can be local.** With Ollama, nothing leaves the machine at all. When you do use a hosted model, that's your key and your choice, per install.
-- **Your tools ask first.** Anything that writes, creates, schedules, or generates goes through an approval gate. Looking is free; acting is permitted.
-- **It stops when you stop it.** One process, one folder. `docker compose down` and the butler is off duty.
+## Meet the team
+
+Domo is the chief of staff — he remembers, schedules, researches, and asks before acting. He is not the only pair of hands in the house. The coding-agent CLIs installed on your machine become **teammates**: named characters with roles, whom Domo can hand a coding task to through the acting `delegate_task` tool.
+
+| Name | Who they are | Runs on |
+| --- | --- | --- |
+| **Majordomo (Domo)** | chief of staff — delegates, remembers, asks first | Majordomo itself (any provider key, or Ollama) |
+| **Claude** | the senior engineer | `claude` (Claude Code) |
+| **Codex** | the fast prototyper | `codex` (Codex CLI) |
+| **Gemini** | the researcher | `gemini` (Gemini CLI) |
+| **Otto** | the open-source all-rounder | `opencode` (OpenCode) |
+| **Cursor** | the editor | `cursor-agent` (Cursor) |
+| **Copilot** | the pair programmer | `copilot` (GitHub Copilot CLI) |
+| **Aider** | the focused patcher | `aider` (experimental — its non-interactive flags are the least battle-tested) |
+
+How a delegation works: say *"delegate to Claude: fix the parser"* (or ask the model in your own words). `delegate_task` is an **acting** tool, so it passes the approval gate — nothing runs unapproved. The teammate runs in the sandboxed workspace via its CLI's non-interactive mode (`claude -p`, `codex exec`, `gemini -p`, `opencode run`, `cursor-agent -p`, `copilot -p`, `aider --message … --yes-always`), with a hard timeout (`MAJORDOMO_TEAMMATE_TIMEOUT`, default 600s; a run that overruns is stopped). Its output comes back into the conversation, and the run is recorded in the character's home — `teammates/<name>/` in the data directory: a `character.json` card, a `transcript.jsonl` of every run, and a `notes.md` where each run appends a one-line outcome. Per-character memory, in plain files, like everything else here.
+
+**Honest notes.** The bridge uses each CLI's headless one-shot mode — there is no ACP/session protocol, no shared group chat where the bots talk to each other, and no streaming of a run in progress; a delegation is a task handed over and a result handed back. Teammates run under **their own logins and subscriptions** — Majordomo never sees, stores, or passes their credentials; it only starts the program you already installed. Detection is a PATH lookup: `majordomo agents` shows the cast with installed status and run counts, `majordomo team` prints the roster. Set `MAJORDOMO_TEAMMATES=off` to remove the tool entirely.
+
+## How it compares
+
+Majordomo's teammates were inspired by [Codync](https://github.com/leepokai/Codync), which pioneered turning installed agent CLIs into persistent phone-reachable bots. The longer comparison — and what we borrowed, with credit — lives in [`docs/compare.md`](docs/compare.md).
+
+|  | Majordomo | Codync | Hosted bot apps |
+| --- | --- | --- | --- |
+| Price | Free (MIT) | Free (Apache-2.0) | Subscription |
+| Open source | ✓ | ✓ | ✗ |
+| Runs on your machine | ✓ | ✓ | ✗ (their cloud) |
+| Brings your own agent CLIs | ✓ (7 known CLIs) | ✓ (~40 CLIs) | ✗ |
+| Brings your own model key | ✓ (9 providers + Ollama) | ✗ — it has no brain of its own; it hosts other agents | ✗ (their model) |
+| Memory in plain files | ✓ (Markdown you can read and edit) | ✗ | ✗ |
+| Native phone apps | ✗ (responsive web window over your private network) | ✓ | ✓ |
+| Group chats of bots | ✗ (Domo delegates one task at a time) | ✓ | varies |
+| Voice calls | ✗ | ✗ | varies |
 
 ## What you can do
 
@@ -58,6 +93,7 @@ Majordomo takes the other side of that trade:
 - **Work your inbox** — list, read, and search email, save drafts into the workspace, and send (sending is an acting tool: it asks first). Standard-library IMAP/SMTP behind the `MAJORDOMO_MAIL_*` settings; offline runs get a seeded fake mailbox, and an unconfigured live run says so instead of pretending.
 - **Run always-on** — `majordomo daemon` ticks the scheduler forever, firing due reminders into your inbox session with no window open. Service files for systemd and Windows Task Scheduler ship in `deploy/` (see `docs/always-on.md`).
 - **File its own facts — only if you opt in.** With `MAJORDOMO_AUTO_MEMORY=true`, simple statements in your own messages ("my favourite coffee is ...", "remember ...") are filed to memory after the turn. The extractor is deliberately narrow: questions, commands, and chit-chat are never filed. Off by default.
+- **Delegate to teammates** — hand a coding task to Claude, Codex, Gemini, Otto, Cursor, Copilot, or Aider (whichever CLIs are installed) with the approval-gated `delegate_task` tool; the result comes back into the conversation and lands in that character's transcript and notes. See [Meet the team](#meet-the-team).
 - **Plug in MCP servers** — point Majordomo at a JSON config and every tool those servers expose joins the registry, approval gate included. The example config points Majordomo at a second Majordomo — it is an MCP server itself (`majordomo mcp-server`).
 
 ## Takes initiative
@@ -69,6 +105,8 @@ A majordomo who only answers when spoken to is a search box. While the daemon (o
 - **The morning brief.** `majordomo brief` assembles today from real state — active reminders with overdue ones called out, how much mail is new plus the latest subjects, and your most recent memory entries — prints it, and saves it to the workspace as `brief-YYYY-MM-DD.md`. No LLM: a template over the same stores, so it works fully offline.
 
 The engine's memory is one small JSON file (`initiative.json` in the data directory): seen mail ids and the reminders it watched fire. Delete it and the next tick simply re-baselines.
+
+**Notifications.** A digest in the inbox session only helps if you open the window. Set `MAJORDOMO_NOTIFY_WEBHOOK` to any URL that accepts a JSON POST and the same "needs you" lines also travel: each new-mail digest and each escalation is sent as `{"title", "body", "source": "majordomo"}` — a shape that works with ntfy-style servers, generic webhook receivers, and automation inboxes (a Make/n8n webhook URL is a fine target). It is outbound only, best effort (a dead webhook is logged, never fatal), and off when the variable is unset. Test yours any time with `majordomo notify "Test" "It works"`. See [`docs/always-on.md`](docs/always-on.md).
 
 ## Feature map
 
@@ -85,6 +123,8 @@ The engine's memory is one small JSON file (`initiative.json` in the data direct
 | Mail | IMAP/SMTP tools (stdlib only) behind a backend protocol; fake mailbox offline, honest "not configured" otherwise | Your mail account for live use |
 | Always-on daemon | `majordomo daemon` ticks the scheduler; systemd + Task Scheduler files in `deploy/` | Nothing |
 | Initiative | Mail watch digests + one-time escalation of unacknowledged reminders, per tick; state in `initiative.json` | A running daemon or web app |
+| Teammates | Installed agent CLIs as named characters; `delegate_task` runs one in the workspace (approval-gated, timed, transcribed) | The CLI itself, logged in by you |
+| Notifications | Initiative digests + escalations POSTed as JSON to your webhook (`MAJORDOMO_NOTIFY_WEBHOOK`) | Any webhook receiver (ntfy-style, Make/n8n, …) |
 | Morning brief | `majordomo brief` — reminders, new mail, recent memory, templated from real state | Nothing |
 | Self-filing memory | Opt-in (`MAJORDOMO_AUTO_MEMORY`); a narrow extractor files stated facts after a turn | Nothing |
 | MCP client | stdio JSON-RPC client; remote tools namespaced `<server>__<tool>`, `readOnlyHint` honoured | Any MCP server |
@@ -153,6 +193,7 @@ Traffic stays inside your encrypted tailnet — nothing is published to the publ
 | `create_word_doc`, `create_powerpoint`, `create_spreadsheet` | Create Office documents | **Acting** |
 | `generate_image` | Generate an image into the workspace | **Acting** |
 | `schedule_reminder`, `cancel_reminder` | Set or cancel reminders | **Acting** |
+| `delegate_task` | Hand a coding task to a teammate (an installed agent CLI) in the workspace | **Acting** |
 | `<server>__<tool>` (MCP) | Whatever the connected server offers | Follows its `readOnlyHint` |
 
 **Acting** tools run only when the run approves them: the interactive CLI asks per call, the web API takes an `approve` flag per message, and the demo auto-approves because every backend behind it is a fake. A declined call is reported to the model as declined — the agent never quietly retries its way around you.
@@ -238,6 +279,7 @@ One process does everything; the **data directory** (default `~/.majordomo`, or 
 ├── schedules.json   reminders
 ├── goals.json       goals and their next moves
 ├── initiative.json  initiative state: seen mail ids, fired reminders
+├── teammates/       one folder per character: character.json, transcript.jsonl, notes.md
 └── workspace/       the only folder the file/document tools may touch
     └── images/      generated images land here
 ```
@@ -281,6 +323,9 @@ Everything is an environment variable (or a `.env` file) — see [`.env.example`
 | `MAJORDOMO_*_API_KEY` | — | One per hosted provider — see [Bring your own key](#bring-your-own-key). (`MAJORDOMO_OPENAI_API_KEY` also feeds live images.) |
 | `MAJORDOMO_IMAGE_BACKEND` | `fake` | `fake` (placeholder PNG) or `openai` |
 | `MAJORDOMO_MCP_CONFIG` | — | Path to an MCP servers JSON file |
+| `MAJORDOMO_TEAMMATES` | on | `off` removes the `delegate_task` tool entirely |
+| `MAJORDOMO_TEAMMATE_TIMEOUT` | `600` | Seconds before a delegated run is stopped |
+| `MAJORDOMO_NOTIFY_WEBHOOK` | — | Webhook URL for initiative notifications (unset = off) |
 | `MAJORDOMO_HOST` / `MAJORDOMO_PORT` | `127.0.0.1` / `8080` | Web app bind |
 
 ## Develop and test
@@ -294,11 +339,30 @@ pytest
 
 The suite runs entirely on fakes — the fake provider, canned web pages, a fake clock for the scheduler, a placeholder image backend, and a tiny in-repo MCP server fixture — so it needs no network, no keys, and no running model. It covers the approval gate (a declined acting tool *provably* does nothing), memory recall across sessions, sandbox escape attempts, real `.docx`/`.pptx` files created and reopened, and the MCP client speaking the protocol to the fixture server. GitHub Actions runs the same checks on Python 3.11, 3.12, and 3.13.
 
+## FAQ
+
+**Is it free?**
+Yes — MIT-licensed, no paid tier, no account. The only bills are yours: a hosted model's API usage if you bring a key, or the agent-CLI subscriptions you already have.
+
+**Which agents and keys does it work with?**
+As its brain: any of Anthropic, OpenAI, DeepSeek, Gemini, OpenRouter, Groq, Mistral, xAI, or Together by key, or a local Ollama model — see [Bring your own key](#bring-your-own-key). As teammates: Claude Code, Codex, Gemini CLI, OpenCode, Cursor, Copilot, and Aider — whichever are installed and logged in on the machine. The two are independent: Domo can think with a DeepSeek key and delegate coding to your Claude Code subscription.
+
+**Where does my data live?**
+In one folder on your machine — the data directory (`~/.majordomo` by default): Markdown memory, JSON sessions/schedules/goals, the teammates' transcripts, and the workspace. Nothing is stored anywhere else by Majordomo.
+
+**Is Docker verified?**
+Honestly: not yet. The Dockerfile and compose file ship and are maintained, but the image has not yet been built and run end-to-end on a Docker machine by the maintainer — treat the pip install as the verified path until that changes.
+
+**Does it phone home?**
+No. No telemetry, no analytics, no update checks. The only outbound traffic is what you configure: your model provider's endpoint, web search/fetch when you ask for research, your mail servers if you set them up, and your own notification webhook if you set one.
+
 ## What this does — and does not do
 
 Majordomo is a **single-user** agent by design: no accounts, no multi-tenancy, no permission system beyond the approval gate. Run one per person, on their machine.
 
 There is **no browser automation in v1** — no Chromium form-driving, no clicking through websites. Web research is search + readable fetch, and anything richer belongs in an MCP server you connect (that's what the protocol is for). Image generation ships with a placeholder backend; live images need your own provider key and run on your bill. The fake provider is a demo and testing tool — it pattern-matches obvious requests (now including mail checks, briefs, and look-up-and-save research) and answers the rest with a canned line that says what it is. Real conversation needs Ollama or an API key. The initiative engine and the brief are not the fake provider: they are deterministic code over real state, and they work the same with any provider.
+
+Teammates are a bridge, not a hive mind: each delegation is one headless CLI run — no ACP protocol, no live session, no group chat where the characters talk to each other, and no progress streaming; you get the result when the run ends (or the timeout stops it). Notifications are one-way: a webhook POST out, with nothing listening for replies.
 
 Memory recall is honest token search over your files, not embeddings: it finds what shares words with your question, and it returns nothing rather than guessing. The scheduler fires while a Majordomo listener is running: the web app ticks every 30 seconds, `majordomo daemon` ticks forever on its own, and the shipped systemd / Task Scheduler files (see `docs/always-on.md`) make that listener a real always-on service. And the approval gate is a seatbelt, not a vault: it stops the agent from acting unapproved, but the workspace sandbox and your own backups are what protect your files.
 
@@ -308,7 +372,7 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 .
 ├── .github/workflows/ci.yml    # Python matrix tests and package build
 ├── assets/                     # Icon, banner, dashboard + window images, social preview, fingerprint mark
-├── docs/                       # Architecture, the extending guide, always-on setup
+├── docs/                       # Architecture, the extending guide, always-on setup, the Codync comparison
 ├── deploy/                     # systemd unit + Windows Task Scheduler installer
 ├── examples/                   # Example MCP server config
 ├── scripts/demo.py             # Standalone demo, no install needed
@@ -330,6 +394,8 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 │   ├── imagetools.py           # Image backends: fake + OpenAI-compatible
 │   ├── scheduler.py            # Reminders and the firing engine
 │   ├── initiative.py           # Mail watch + escalation, run per tick
+│   ├── teammates.py            # The agent-CLI bridge: characters, detection, runs, transcripts
+│   ├── notify.py               # Outbound webhook notifications (best effort)
 │   ├── brief.py                # The deterministic morning brief
 │   ├── mcp_client.py           # stdio MCP client
 │   ├── runtime.py              # Wiring: settings in, agent out

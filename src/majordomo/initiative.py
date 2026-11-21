@@ -18,6 +18,12 @@ state file in the data directory — seen mail ids, and the reminders
 it watched fire — so nothing is digested or escalated twice, even
 across restarts.
 
+When a ``notify_fn`` is wired in (the runtime does this when
+``MAJORDOMO_NOTIFY_WEBHOOK`` is set), each new-mail digest and each
+escalation also goes out as a notification — the same one line,
+condensed to a title and the line itself. Notification failures are
+swallowed here too: a dead webhook never breaks a tick.
+
 The acknowledgement rule, stated plainly because the schedule store
 has no ack button: a fired reminder counts as *acknowledged* when it
 leaves the schedule store (the user cancelled or cleared it — an
@@ -88,12 +94,14 @@ class InitiativeEngine:
         sessions: SessionStore,
         state_path: Path,
         now_fn: Callable[[], datetime],
+        notify_fn: Callable[[str, str], object] | None = None,
     ) -> None:
         self.backend = backend
         self.schedules = schedules
         self.sessions = sessions
         self.state_path = state_path
         self.now_fn = now_fn
+        self.notify_fn = notify_fn
 
     # -- state ---------------------------------------------------------
 
@@ -120,7 +128,29 @@ class InitiativeEngine:
         self._save(state)
         for line in actions:
             self.sessions.append("inbox", {"role": "assistant", "content": line})
+        self._notify(actions)
         return actions
+
+    def _notify(self, actions: list[str]) -> None:
+        """Send the digest/escalation lines out as notifications.
+
+        Only the "needs you" lines travel: a new-mail digest and an
+        unacknowledged-reminder escalation. Best effort — a failing
+        notifier is logged and forgotten, never raised into the tick.
+        """
+        if self.notify_fn is None:
+            return
+        for line in actions:
+            if line.startswith("📬"):
+                title = "Majordomo — new mail"
+            elif line.startswith("⏰"):
+                title = "Majordomo — a reminder needs you"
+            else:
+                continue
+            try:
+                self.notify_fn(title, line)
+            except Exception:  # noqa: BLE001 - notifications must never break a tick
+                log.warning("initiative.notify_failed", line=line[:60])
 
     # -- mail watch ------------------------------------------------------
 

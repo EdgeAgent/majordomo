@@ -42,6 +42,27 @@ tool.
   only *fired*; that does not count as you having seen it. A
   recurring reminder that fires again restarts its own clock.
 
+### Notifications: the same lines, on your phone
+
+The digest and escalation lines above land in the `inbox` session —
+which helps when you next open the window. To have them *reach* you,
+set a notification webhook:
+
+```bash
+MAJORDOMO_NOTIFY_WEBHOOK=https://ntfy.sh/your-topic   # any URL that takes a JSON POST
+majordomo notify "Test" "It works"                    # prove the channel before you rely on it
+```
+
+Each new-mail digest and each escalation is then also POSTed to that
+URL as `{"title", "body", "source": "majordomo"}` — the title says
+which kind it is ("new mail" / "a reminder needs you"), the body is
+the same one line the inbox gets. The shape suits ntfy-style servers,
+generic webhook receivers, and automation inboxes (Make/n8n/Zapier
+webhook URLs included). Delivery is best effort: a dead webhook is
+logged by the tick and never breaks it, and nothing about the inbox
+digest changes. Notifications are outbound only — Majordomo opens no
+listener for replies. Unset the variable and they're off.
+
 ### The state file
 
 The engine's memory is one small JSON file, `initiative.json`, in

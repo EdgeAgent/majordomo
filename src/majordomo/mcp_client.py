@@ -27,6 +27,7 @@ from pathlib import Path
 from queue import Queue
 from typing import Any, Self
 
+from . import __version__
 from .tools import Tool, ToolRegistry
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -83,7 +84,7 @@ class MCPClient:
             {
                 "protocolVersion": PROTOCOL_VERSION,
                 "capabilities": {},
-                "clientInfo": {"name": "majordomo", "version": "0.6.0"},
+                "clientInfo": {"name": "majordomo", "version": __version__},
             },
         )
         self._notify("notifications/initialized", {})

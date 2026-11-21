@@ -13,6 +13,22 @@ permission system — do not expose it to the public internet.
 - **The approval gate.** Acting tools (writes, document creation,
   scheduling, mail sending, image generation, non-read-only MCP
   tools) run only with the run's approval.
+- **Teammates run as you, so they ask first.** `delegate_task`
+  launches an external program — a coding-agent CLI you installed —
+  inside the workspace, under *your own* login for that CLI, with
+  the task passed as a single argument (no shell, so no injection
+  through the task text) and a hard timeout
+  (`MAJORDOMO_TEAMMATE_TIMEOUT`). It is an acting tool: no approval,
+  no run. What the teammate itself does inside the workspace is that
+  CLI's behaviour under your account — Majordomo records every run
+  (task, exit code, output) in `teammates/<name>/transcript.jsonl`
+  so the delegation is auditable. Majordomo never receives, stores,
+  or passes the CLIs' credentials. Set `MAJORDOMO_TEAMMATES=off` to
+  remove the tool entirely.
+- **Notifications go only where you point them.** The single
+  outbound webhook (`MAJORDOMO_NOTIFY_WEBHOOK`) receives initiative
+  digests and escalations as JSON POSTs — mail senders/subjects and
+  reminder texts, nothing else. It is unset (off) by default.
 - **The workspace sandbox.** File and document tools resolve every path
   against one workspace directory and refuse escapes; the test suite
   attacks it with `..`, absolute paths, and symlinks.

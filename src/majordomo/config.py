@@ -73,6 +73,24 @@ class Settings(BaseSettings):
     # by default — capture is the operator's choice, never a surprise.
     auto_memory: bool = False
 
+    # Teammates: the coding-agent CLIs installed on this machine
+    # (Claude Code, Codex, Gemini CLI, OpenCode, Cursor, Copilot,
+    # Aider) become named characters Majordomo can delegate coding
+    # tasks to, through the acting `delegate_task` tool. On by
+    # default; the tool is registered when at least one known CLI is
+    # detected (or teammates were explicitly switched on). Set
+    # MAJORDOMO_TEAMMATES=off to remove the tool entirely.
+    teammates: bool = True
+    # Per-run timeout for a delegated task, in seconds. A teammate
+    # that runs past it is stopped.
+    teammate_timeout: int = 600
+
+    # Notifications: a webhook URL that accepts a JSON POST
+    # ({"title", "body", "source": "majordomo"}). The daemon sends
+    # one when the initiative engine digests new mail or escalates an
+    # unacknowledged reminder. Empty (the default) means off.
+    notify_webhook: str | None = None
+
     # Web app bind for `majordomo serve`.
     host: str = "127.0.0.1"
     port: int = 8080
@@ -98,6 +116,12 @@ class Settings(BaseSettings):
     def initiative_path(self) -> Path:
         """The initiative engine's state: seen mail ids, fired reminders."""
         return self.data_dir / "initiative.json"
+
+    @property
+    def teammates_dir(self) -> Path:
+        """The teammates' homes: one folder per character (card,
+        transcript, notes), created on that character's first run."""
+        return self.data_dir / "teammates"
 
     def ensure_dirs(self) -> None:
         """Create the data tree on first run."""

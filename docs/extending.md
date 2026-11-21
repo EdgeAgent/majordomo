@@ -39,6 +39,20 @@ approval leaves the world untouched.
 cannot change anything a user would care about: no writes, no sends,
 no state. If it can, it is acting — no exceptions for "small" writes.
 
+## Add a teammate
+
+A teammate is a registry entry, not a subsystem. Add an `AgentCLI`
+to `AGENT_CLIS` in `teammates.py`: the registry key, the character
+(display name, one-line role, avatar initial and colour), the binary
+name looked up on PATH, and the non-interactive argv template with
+`{task}` where the task text goes. Detection, the `delegate_task`
+tool, transcripts, notes, and the `majordomo agents` / `team`
+rosters all pick the new character up from the one entry. If the
+CLI's non-interactive flags are not well established, mark the entry
+`experimental=True` so the roster and docs say so honestly — and
+test detection and runs with a fake binary planted on PATH, the way
+`tests/test_teammates.py` does. Never test against a real agent CLI.
+
 ## Add a provider
 
 Implement the `Provider` protocol from `providers.py`:

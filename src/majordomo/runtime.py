@@ -21,10 +21,12 @@ from .initiative import InitiativeEngine
 from .mailtools import MailBackend, build_mail_backend, register_mail_tools
 from .mcp_client import MCPClient, load_mcp_config, register_mcp_tools
 from .memory import MemoryStore
+from .notify import Notifier
 from .providers import Provider, build_provider
 from .scheduler import ScheduleStore, register_schedule_tools
 from .self_files import SelfStore
 from .sessions import SessionStore
+from .teammates import AgentStatus, detect_agents, register_teammate_tools
 from .tools import ToolRegistry
 from .webtools import (
     DuckDuckGoSearchBackend,
@@ -62,6 +64,8 @@ class Runtime:
     mail_backend: MailBackend
     initiative: InitiativeEngine
     self_store: SelfStore
+    notifier: Notifier
+    teammates: list[AgentStatus] = field(default_factory=list)
     mcp_clients: list[MCPClient] = field(default_factory=list)
 
     def close(self) -> None:
@@ -103,12 +107,31 @@ def build_runtime(
     mail_backend = build_mail_backend(settings, is_offline)
     register_mail_tools(registry, mail_backend, workspace)
     register_schedule_tools(registry, schedules, lambda: datetime.now(UTC))
+
+    # Teammates: the delegate_task tool exists when teammates are on
+    # and at least one known agent CLI is detected — or when the
+    # operator explicitly switched teammates on (then missing binaries
+    # report "not installed" through the tool instead of the tool
+    # silently not existing). MAJORDOMO_TEAMMATES=off removes it.
+    teammates = detect_agents()
+    if settings.teammates and (
+        any(status.available for status in teammates) or "teammates" in settings.model_fields_set
+    ):
+        register_teammate_tools(
+            registry,
+            workspace_root=settings.workspace_dir,
+            teammates_dir=settings.teammates_dir,
+            timeout=settings.teammate_timeout,
+        )
+
+    notifier = Notifier(settings.notify_webhook)
     initiative = InitiativeEngine(
         backend=mail_backend,
         schedules=schedules,
         sessions=sessions,
         state_path=settings.initiative_path,
         now_fn=lambda: datetime.now(UTC),
+        notify_fn=notifier.notify if notifier.enabled else None,
     )
 
     mcp_clients: list[MCPClient] = []
@@ -144,5 +167,7 @@ def build_runtime(
         mail_backend=mail_backend,
         initiative=initiative,
         self_store=self_store,
+        notifier=notifier,
+        teammates=teammates,
         mcp_clients=mcp_clients,
     )
