@@ -194,7 +194,15 @@ Edit a file and the next reply comes from a slightly different Majordomo. Inspec
   <em>His face: a small living window — tap the head and he answers; the buttons open reads, not chat.</em>
 </p>
 
-Domo's face is a little living window in the Pocket Pip style: the robot head floating in the corner (tap him and he bounces; point near him and he leans), one thought bubble carrying his status, and the work along the bottom — Plan · Build · Write · Check · Done. The buttons open **reads**: Ideas, Feed, Goal, and Artifact, each a short briefing-style panel. The gold fingerprint opens **Soul & Memory** — the same files described above, as a read. And the Goal read is writable: type a goal, give it a **next move**, and it stays on his list until it's done. (The window is a companion piece built for Domo's household; the agent itself is the package in this repo.)
+Domo's face is a little living window in the Pocket Pip style: the robot head floating in the corner (tap him and he bounces; point near him and he leans), one thought bubble carrying his status, and the work along the bottom — Plan · Build · Write · Check · Done. The buttons open **reads**: Ideas, Feed, Goal, and Artifact, each a short briefing-style panel. The gold fingerprint opens **Soul & Memory** — the same files described above, as a read. And the Goal read is writable: type a goal, give it a **next move**, and it stays on his list until it's done.
+
+**The window now ships in this repo.** Since 0.6.0, `majordomo serve` opens the one window as the web UI itself — one square panel with everything inside it: the living face, the chat window (the real agent loop, not a mock-up), the four reads, and Soul & Memory behind the fingerprint. The Artifact read is a files shelf: every file in the workspace, plus his brand images, listed with its type and size and downloadable in one tap. (A companion dashboard Space in the same style also exists in Domo's household — but the window's home is here, in the package.)
+
+<p align="center">
+  <img src="assets/dashboard.png" alt="The Majordomo window served by the repo itself — one square window: the robot head, the thought bubble, the chat window with the approval gate declining an unapproved memory write, the four read buttons, and the step row" width="72%">
+  <br>
+  <em>The window as `majordomo serve` serves it — a real run on the offline demo provider: the chat asks to file a memory, and the gate declines it because approval wasn't ticked. Looking is free; acting is permitted.</em>
+</p>
 
 ## MCP: plug in any server
 

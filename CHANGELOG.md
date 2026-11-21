@@ -6,6 +6,48 @@ follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-11-21
+
+### Added
+
+- **The one window.** The web UI is now a single square window with
+  everything inside it — no separate pages. `majordomo serve` opens
+  the window: a slim header (head icon, MAJORDOMO wordmark, the gold
+  fingerprint, an "On watch" status), the living face (Roboto's robot
+  head, byte-identical to the Pocket Pip asset, floating low in the
+  window — tap for a bounce and a status line, pointer for a lean,
+  an occasional blink; transforms only, the image is never edited),
+  one thought bubble carrying only Domo's status lines in sync with
+  the Plan · Build · Write · Check · Done steps and the
+  Domo · Mail · Memory · Brief · Gate agent dots, and the chat
+  window — the real `/chat` agent loop, approve-actions checkbox
+  included — all in the one panel.
+- Reads inside the window: **Ideas** (a short worth-a-look list),
+  **Feed** (recent activity from `/sessions`), **Goal** (goals CRUD,
+  below), and **Artifact** — a files shelf where every workspace file
+  and brand file is a working download, with the brand images shown
+  as thumbnails. The gold fingerprint opens **Soul & Memory** inside
+  the window (`GET /self-data`); the standalone `/self` page remains.
+- Goals (`src/majordomo/goals.py`): the owner's goals with a next
+  move each, persisted in `goals.json` in the data directory.
+  Endpoints: `GET /goals`, `POST /goals`, `POST /goals/{id}/next-move`,
+  `POST /goals/{id}/done`, `DELETE /goals/{id}`.
+- The files shelf endpoints: `GET /files` lists the sandboxed
+  workspace (name, size, modified) and `GET /files/{name}` downloads
+  one file — resolved through the same workspace path-safety as the
+  agent's file tools, so traversal attempts are refused.
+- Brand statics shipped in the package (`src/majordomo/static/`,
+  served at `/brand/<name>` with correct content types): the real
+  `roboto-head.png`, `icon.jpg`, `banner.jpg`, `window.gif`, and
+  `fingerprint.svg`.
+
+### Changed
+
+- Version 0.6.0 (package, `__version__`, CLI version output, MCP
+  client info).
+
+## [0.5.0] — 2026-11-21
+
 ### Added
 
 - A soul, an identity, and a curated memory — the self files

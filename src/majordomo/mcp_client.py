@@ -83,7 +83,7 @@ class MCPClient:
             {
                 "protocolVersion": PROTOCOL_VERSION,
                 "capabilities": {},
-                "clientInfo": {"name": "majordomo", "version": "0.1.0"},
+                "clientInfo": {"name": "majordomo", "version": "0.6.0"},
             },
         )
         self._notify("notifications/initialized", {})
