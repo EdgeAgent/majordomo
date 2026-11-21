@@ -1,15 +1,7 @@
-<p align="center">
-  <img src="assets/icon.jpg" alt="Majordomo icon — Domo, the little agent, at his desk" width="88" height="88">
-</p>
-
 <h1 align="center">Majordomo</h1>
 
 <p align="center">
   <strong>Your self-hosted personal AI agent — lives on your machine, remembers what matters, and gets the work done.</strong>
-</p>
-
-<p align="center">
-  <img src="assets/banner.jpg" alt="Majordomo — your self-hosted personal AI agent" width="100%">
 </p>
 
 <p align="center">
