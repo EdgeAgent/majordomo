@@ -23,6 +23,7 @@ from .mcp_client import MCPClient, load_mcp_config, register_mcp_tools
 from .memory import MemoryStore
 from .providers import Provider, build_provider
 from .scheduler import ScheduleStore, register_schedule_tools
+from .self_files import SelfStore
 from .sessions import SessionStore
 from .tools import ToolRegistry
 from .webtools import (
@@ -60,6 +61,7 @@ class Runtime:
     workspace: Workspace
     mail_backend: MailBackend
     initiative: InitiativeEngine
+    self_store: SelfStore
     mcp_clients: list[MCPClient] = field(default_factory=list)
 
     def close(self) -> None:
@@ -75,6 +77,7 @@ def build_runtime(
     provider = provider or build_provider(settings)
     is_offline = offline if offline is not None else provider.name == "fake"
 
+    self_store = SelfStore(settings.data_dir)
     memory = MemoryStore(settings.memory_dir)
     sessions = SessionStore(settings.sessions_dir)
     schedules = ScheduleStore(settings.schedules_path)
@@ -127,6 +130,7 @@ def build_runtime(
         sessions=sessions,
         memory=memory,
         auto_memory=settings.auto_memory,
+        self_store=self_store,
     )
     return Runtime(
         settings=settings,
@@ -139,5 +143,6 @@ def build_runtime(
         workspace=workspace,
         mail_backend=mail_backend,
         initiative=initiative,
+        self_store=self_store,
         mcp_clients=mcp_clients,
     )

@@ -3,6 +3,7 @@
     majordomo chat        interactive chat (acting tools ask first)
     majordomo ask "..."   one-shot question
     majordomo providers   every model provider, its key var, the active one
+    majordomo self        the self files: soul, identity, user, memory
     majordomo memory ...  inspect long-term memory
     majordomo schedule ...  manage reminders
     majordomo serve       the web app (chat page + API)
@@ -30,6 +31,7 @@ from . import __version__
 from .config import Settings
 from .providers import PROVIDER_PRESETS, ProviderError, resolve_model, resolve_provider_name
 from .runtime import Runtime, build_runtime
+from .self_files import SelfStore
 from .tools import approve_all, approve_none
 
 app = typer.Typer(help="Majordomo — your self-hosted personal AI agent.")
@@ -87,6 +89,33 @@ def providers() -> None:
         "MAJORDOMO_PROVIDER pins a provider; MAJORDOMO_MODEL overrides the model.",
         markup=False,
     )
+
+
+@app.command("self")
+def self_command() -> None:
+    """Show the self files — soul, identity, user, curated memory.
+
+    Lists each file's status and prints SOUL.md: the persona the
+    agent assembles into its system prompt on every turn. The files
+    live at the top of the data directory and are seeded from the
+    shipped templates on first run; editing one changes who answers.
+    There are no secrets in these files, by design.
+    """
+    store = SelfStore(Settings().data_dir)
+    table = Table("File", "Status", "Size")
+    for entry in store.status():
+        table.add_row(
+            entry.name,
+            "present" if entry.present else "missing",
+            f"{entry.size} B" if entry.present else "—",
+        )
+    console.print(table)
+    soul = store.read("SOUL.md")
+    if soul is None:
+        console.print("SOUL.md is missing — no persona is loaded.", markup=False)
+    else:
+        console.print("\nSOUL.md:\n", markup=False)
+        console.print(soul, markup=False)
 
 
 @app.command()

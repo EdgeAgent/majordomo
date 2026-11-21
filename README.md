@@ -171,6 +171,21 @@ majordomo memory forget preference:1
 
 Automatic capture is **off** by default, by design. The write paths are the `memory_remember` tool (approval-gated) and the commands above. One opt-in exists: set `MAJORDOMO_AUTO_MEMORY=true` and a deliberately narrow extractor files simple statements from your own messages after each turn — explicit "remember ..." statements and "my <thing> is <value>" declarations, filed as facts. Questions, commands, and chit-chat are never filed, and a fact already in memory is not filed twice. If it isn't in the files, Majordomo doesn't remember it.
 
+## Soul, identity, memory
+
+![Majordomo's mark — a gold fingerprint](assets/fingerprint.svg)
+
+Majordomo is not a blank chatbot with tools. Four plain files at the top of the data directory give him a soul, an identity, and a curated memory — seeded from templates on first run, never overwritten afterwards, and assembled into his system prompt on **every turn**, ahead of the conversation:
+
+| File | What it is |
+| --- | --- |
+| `SOUL.md` | The persona: who he is, his voice (capable, concise, a touch formal, warm), and how he behaves — anticipate, verify before claiming, ask before acting. The approval philosophy stated as character; the agent loop still enforces it in code. |
+| `IDENTITY.md` | Name (Majordomo — "Domo"), character line, vibe, and his mark: a gold fingerprint, because no two households — and no two Domos — are alike. |
+| `USER.md` | The owner: name, timezone, what they care about. Ships as a template with prompts to fill in. |
+| `MEMORY.md` | The curated long-term memory — Facts / People / Preferences / Commitments, distilled above the day-to-day entries in `memory/`. |
+
+Edit a file and the next reply comes from a slightly different Majordomo. Inspect the set from the CLI with `majordomo self` (status of every file, plus the full SOUL.md), or open the web app's **`/self`** page — the same files rendered read-only under his fingerprint mark, next to the chat page.
+
 ## MCP: plug in any server
 
 Majordomo works both sides of MCP. As a *client*, give it a config file (see [`examples/mcp-servers.json`](examples/mcp-servers.json)):
@@ -270,7 +285,7 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 ```text
 .
 ├── .github/workflows/ci.yml    # Python matrix tests and package build
-├── assets/                     # Icon and banner (JPG) + social preview (SVG)
+├── assets/                     # Icon and banner (JPG), social preview + fingerprint mark (SVG)
 ├── docs/                       # Architecture, the extending guide, always-on setup
 ├── deploy/                     # systemd unit + Windows Task Scheduler installer
 ├── examples/                   # Example MCP server config
@@ -282,6 +297,8 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 │   ├── tools.py                # The tool registry
 │   ├── coretools.py            # Memory + recall tools
 │   ├── memory.py               # Long-term memory as Markdown files
+│   ├── self_files.py           # SOUL / IDENTITY / USER / MEMORY: seeding + prompt assembly
+│   ├── templates/              # The shipped self-file templates (seeded on first run)
 │   ├── sessions.py             # Persisted conversations + cross-session search
 │   ├── filetools.py            # The sandboxed workspace
 │   ├── webtools.py             # Search + fetch behind injectable backends

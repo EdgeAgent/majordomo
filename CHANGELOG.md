@@ -8,6 +8,26 @@ follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A soul, an identity, and a curated memory — the self files
+  (`src/majordomo/self_files.py`): `SOUL.md` (the persona: voice and
+  behaviour — anticipate, verify before claiming, ask before acting),
+  `IDENTITY.md` (Majordomo, "Domo", and the gold fingerprint as his
+  mark), `USER.md` (a template for the owner), and `MEMORY.md` (the
+  curated long-term memory — Facts / People / Preferences /
+  Commitments — above the per-kind entry files). All four live at the
+  top of the data directory, are seeded on first run from templates
+  shipped in `src/majordomo/templates/`, and are never overwritten.
+  The agent assembles its system prompt from them on every turn
+  (each file capped at 6,000 characters, missing files skipped),
+  ahead of the conversation; `Agent.system_prompt()` exposes the
+  assembled prompt.
+- `majordomo self`: lists each self file's status and size and
+  prints SOUL.md. The web app gains a read-only `/self` page
+  rendering Soul, Identity, User, and the Memory section under the
+  fingerprint mark, linked from the chat page header.
+- `assets/fingerprint.svg`: Majordomo's identity mark — a stylized
+  fingerprint in gold (#E8B84B) on a transparent background — also
+  inlined in the `/self` page header.
 - Any key, any model: a provider preset registry (`PROVIDER_PRESETS`
   in `src/majordomo/providers.py`) covering Anthropic, OpenAI,
   DeepSeek, Gemini, OpenRouter, Groq, Mistral, xAI, and Together,

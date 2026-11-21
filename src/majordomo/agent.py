@@ -19,6 +19,7 @@ import structlog
 from .autocapture import extract_facts
 from .memory import MemoryStore
 from .providers import Provider
+from .self_files import SelfStore
 from .sessions import SessionStore
 from .tools import Approver, ToolError, ToolRegistry
 
@@ -63,6 +64,7 @@ class Agent:
         max_steps: int = 8,
         memory: MemoryStore | None = None,
         auto_memory: bool = False,
+        self_store: SelfStore | None = None,
     ) -> None:
         self.provider = provider
         self.registry = registry
@@ -70,6 +72,19 @@ class Agent:
         self.max_steps = max_steps
         self.memory = memory
         self.auto_memory = auto_memory
+        self.self_store = self_store
+
+    def system_prompt(self) -> str:
+        """The system prompt for the next turn.
+
+        The house rules in ``SYSTEM_PROMPT`` come first; when a self
+        store is wired in, the self files (SOUL, IDENTITY, USER,
+        MEMORY) are assembled behind them — so an edit to SOUL.md
+        changes who answers the very next message.
+        """
+        if self.self_store is None:
+            return SYSTEM_PROMPT
+        return self.self_store.system_prompt(SYSTEM_PROMPT)
 
     def run(self, session_id: str | None, user_text: str, approver: Approver) -> AgentResult:
         """Run one user message to a final reply, persisting the session."""
@@ -81,7 +96,7 @@ class Agent:
         final_text = ""
 
         for _step in range(self.max_steps):
-            messages = [{"role": "system", "content": SYSTEM_PROMPT}, *history]
+            messages = [{"role": "system", "content": self.system_prompt()}, *history]
             try:
                 response = self.provider.chat(messages, self.registry.schemas())
             except Exception as exc:  # noqa: BLE001 - provider failures are reported, not hidden

@@ -1,12 +1,13 @@
 """The web app: one chat page plus a small JSON API.
 
 FastAPI serves a single self-contained HTML page (no build step, works
-on a phone browser) and four endpoints:
+on a phone browser) and these endpoints:
 
 - ``GET  /health``   — liveness, provider name
 - ``POST /chat``     — {message, session_id?, approve} → {session_id, reply, events}
 - ``GET  /sessions`` — session summaries
 - ``GET  /memory``   — long-term memory entries
+- ``GET  /self``     — the self files page: soul, identity, user, memory
 
 Approvals ride on the request: ``approve: true`` approves acting tools
 for that one message; without it, acting tools are declined and the
@@ -20,6 +21,7 @@ Reach it from a phone with Tailscale Serve — see the README.
 from __future__ import annotations
 
 import asyncio
+import html
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -36,6 +38,7 @@ from . import __version__
 from .config import Settings
 from .providers import Provider
 from .runtime import Runtime, build_runtime
+from .self_files import SELF_FILES, SelfStore
 from .tools import approve_all, approve_none
 
 PAGE = """<!DOCTYPE html>
@@ -67,7 +70,7 @@ PAGE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<header><h1>MAJORDOMO</h1><span>self-hosted · on your machine</span></header>
+<header><h1>MAJORDOMO</h1><span>self-hosted · on your machine · <a href="/self" style="color:#2DD4BF">soul &amp; memory</a></span></header>
 <div id="log"></div>
 <form id="composer">
   <input type="text" id="text" placeholder="Ask Majordomo…" autocomplete="off">
@@ -100,6 +103,86 @@ PAGE = """<!DOCTYPE html>
     add(data.reply, 'msg agent');
   });
 </script>
+</body>
+</html>
+"""
+
+
+# Majordomo's mark, inlined for the /self header — the same gold
+# fingerprint that ships as assets/fingerprint.svg in the repository.
+FINGERPRINT_SVG = """<svg viewBox="0 0 100 100" width="54" height="54" role="img" aria-label="Majordomo fingerprint mark">
+  <path d="M 52.8 44.7 A 5.5 6.2 0 1 1 47.7 44.4" fill="none" stroke="#E8B84B" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M 45.6 39.3 A 10.5 11.8 0 1 1 40.9 44.1" fill="none" stroke="#E8B84B" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M 52.7 32.9 A 15.5 17.4 0 1 1 46.0 33.2" fill="none" stroke="#E8B84B" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M 35.5 33.8 A 20.5 23.0 0 1 1 30.2 44.1" fill="none" stroke="#E8B84B" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M 47.8 21.5 A 25.5 28.6 0 1 1 41.3 23.2" fill="none" stroke="#E8B84B" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M 22.4 35.6 A 30.5 34.2 0 1 1 19.5 50.0" fill="none" stroke="#E8B84B" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M 40.8 11.6 A 35.5 39.8 0 1 1 35.0 14.0" fill="none" stroke="#E8B84B" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M 72.7 86.2 A 39.5 44.2 0 0 1 27.3 86.2" fill="none" stroke="#E8B84B" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M 14.2 31.3 A 39.5 44.2 0 0 1 85.8 31.3" fill="none" stroke="#E8B84B" stroke-width="3.2" stroke-linecap="round"/>
+</svg>"""
+
+_SELF_TITLES = {
+    "SOUL.md": "Soul",
+    "IDENTITY.md": "Identity",
+    "USER.md": "User",
+    "MEMORY.md": "Memory",
+}
+
+_SELF_STYLE = """
+  :root { color-scheme: dark; }
+  body { margin: 0; font-family: system-ui, sans-serif; background: #060A14; color: #E8EAF0; }
+  header { padding: 14px 18px; border-bottom: 2px solid #E8B84B; display: flex;
+           justify-content: space-between; align-items: center; }
+  header .brand { display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 20px; margin: 0; color: #E8B84B; letter-spacing: .04em; }
+  header span, header a { color: #2DD4BF; font-size: 12px; }
+  main { padding: 16px 18px 60px; max-width: 760px; margin: 0 auto; }
+  section { background: #0D1526; border: 1px solid #22304F; border-radius: 12px;
+            padding: 14px 18px; margin: 14px 0; }
+  section h2 { margin: 0 0 4px; font-size: 16px; color: #E8B84B; }
+  section .file { color: #8FA3C8; font-size: 12px; margin-bottom: 8px; }
+  section pre { white-space: pre-wrap; line-height: 1.5; margin: 0;
+                font-family: inherit; font-size: 14px; }
+  .missing { color: #8FA3C8; font-style: italic; }
+  p.note { color: #8FA3C8; font-size: 13px; line-height: 1.5; }
+"""
+
+
+def render_self_page(store: SelfStore) -> str:
+    """The /self page: the self files, read-only, in the app's style.
+
+    Soul, Identity, User, and the curated Memory section — the same
+    files the agent assembles into its system prompt, shown exactly
+    as they sit on disk. Editing happens in the files themselves.
+    """
+    sections: list[str] = []
+    for name in SELF_FILES:
+        text = store.read(name)
+        if text is None:
+            body = '<p class="missing">This file is missing.</p>'
+        else:
+            body = f"<pre>{html.escape(text.strip())}</pre>"
+        sections.append(
+            f"<section><h2>{_SELF_TITLES[name]}</h2>"
+            f'<div class="file">{name} · read-only — edit the file to change him</div>'
+            f"{body}</section>"
+        )
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Majordomo — Soul &amp; Memory</title>
+<style>{_SELF_STYLE}</style>
+</head>
+<body>
+<header><div class="brand">{FINGERPRINT_SVG}<h1>MAJORDOMO</h1></div><a href="/">← chat</a></header>
+<main>
+<p class="note">Who he is, who he serves, and what he keeps — the plain files at the
+top of the data directory, assembled into his system prompt on every turn.</p>
+{"".join(sections)}
+</main>
 </body>
 </html>
 """
@@ -176,5 +259,9 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
     @app.get("/memory")
     def memory() -> list[dict[str, str]]:
         return [{"id": e.id, "kind": e.kind, "text": e.text} for e in runtime.memory.list()]
+
+    @app.get("/self", response_class=HTMLResponse)
+    def self_page() -> str:
+        return render_self_page(runtime.self_store)
 
     return app
