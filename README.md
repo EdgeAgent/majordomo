@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.png" alt="Majordomo icon — Domo, the little agent, at his desk" width="88" height="88">
+  <img src="assets/icon.jpg" alt="Majordomo icon — Domo, the little agent, at his desk" width="88" height="88">
 </p>
 
 <h1 align="center">Majordomo</h1>
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/banner.png" alt="Majordomo — your self-hosted personal AI agent" width="100%">
+  <img src="assets/banner.jpg" alt="Majordomo — your self-hosted personal AI agent" width="100%">
 </p>
 
 <p align="center">
@@ -218,7 +218,7 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 ```text
 .
 ├── .github/workflows/ci.yml    # Python matrix tests and package build
-├── assets/                     # Icon and banner (PNG) + social preview (SVG)
+├── assets/                     # Icon and banner (JPG) + social preview (SVG)
 ├── docs/                       # Architecture and the extending guide
 ├── examples/                   # Example MCP server config
 ├── scripts/demo.py             # Standalone demo, no install needed
