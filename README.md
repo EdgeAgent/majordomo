@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.jpg" alt="Majordomo icon — Domo, the little agent, at his desk" width="88" height="88">
+  <img src="assets/icon.jpg" alt="Majordomo icon — Domo's robot head" width="88" height="88">
 </p>
 
 <h1 align="center">Majordomo</h1>
@@ -185,6 +185,16 @@ Majordomo is not a blank chatbot with tools. Four plain files at the top of the 
 | `MEMORY.md` | The curated long-term memory — Facts / People / Preferences / Commitments, distilled above the day-to-day entries in `memory/`. |
 
 Edit a file and the next reply comes from a slightly different Majordomo. Inspect the set from the CLI with `majordomo self` (status of every file, plus the full SOUL.md), or open the web app's **`/self`** page — the same files rendered read-only under his fingerprint mark, next to the chat page.
+
+### The little window
+
+<p align="center">
+  <img src="assets/window.gif" alt="Domo's living window — the robot head in the corner, a thought bubble with his status, reads for Ideas, Feed, Goal and Artifact, and the gold fingerprint opening Soul & Memory" width="72%">
+  <br>
+  <em>His face: a small living window — tap the head and he answers; the buttons open reads, not chat.</em>
+</p>
+
+Domo's face is a little living window in the Pocket Pip style: the robot head floating in the corner (tap him and he bounces; point near him and he leans), one thought bubble carrying his status, and the work along the bottom — Plan · Build · Write · Check · Done. The buttons open **reads**: Ideas, Feed, Goal, and Artifact, each a short briefing-style panel. The gold fingerprint opens **Soul & Memory** — the same files described above, as a read. And the Goal read is writable: type a goal, give it a **next move**, and it stays on his list until it's done. (The window is a companion piece built for Domo's household; the agent itself is the package in this repo.)
 
 ## MCP: plug in any server
 
