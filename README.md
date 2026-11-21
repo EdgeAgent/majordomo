@@ -101,6 +101,7 @@ Majordomo's teammates were inspired by [Codync](https://github.com/leepokai/Cody
 - **File its own facts — only if you opt in.** With `MAJORDOMO_AUTO_MEMORY=true`, simple statements in your own messages ("my favourite coffee is ...", "remember ...") are filed to memory after the turn. The extractor is deliberately narrow: questions, commands, and chit-chat are never filed. Off by default.
 - **Delegate to teammates** — hand a coding task to Claude, Codex, Gemini, Otto, Cursor, Copilot, or Aider (whichever CLIs are installed) with the approval-gated `delegate_task` tool; the result comes back into the conversation and lands in that character's transcript and notes. See [Meet the team](#meet-the-team).
 - **Plug in MCP servers** — point Majordomo at a JSON config and every tool those servers expose joins the registry, approval gate included. The example config points Majordomo at a second Majordomo — it is an MCP server itself (`majordomo mcp-server`).
+- **Make media through Muse4AI** — with the Muse4AI app running on the same machine, ask for an image or a video and Majordomo queues it on your own Muse session through that app's local API, waits for it, and brings back the result (extending a finished video works too). Generations are acting tools: they ask first. See [Media through Muse4AI](#media-through-muse4ai).
 
 ## Takes initiative
 
@@ -130,6 +131,7 @@ The engine's memory is one small JSON file (`initiative.json` in the data direct
 | Always-on daemon | `majordomo daemon` ticks the scheduler; systemd + Task Scheduler files in `deploy/` | Nothing |
 | Initiative | Mail watch digests + one-time escalation of unacknowledged reminders, per tick; state in `initiative.json` | A running daemon or web app |
 | Teammates | Installed agent CLIs as named characters; `delegate_task` runs one in the workspace (approval-gated, timed, transcribed) | The CLI itself, logged in by you |
+| Media (Muse4AI) | Stdlib client for a locally running Muse4AI app; generate/extend image+video jobs on your own Muse session, polled to completion | Muse4AI installed + running on this machine, its API key |
 | Notifications | Initiative digests + escalations POSTed as JSON to your webhook (`MAJORDOMO_NOTIFY_WEBHOOK`) | Any webhook receiver (ntfy-style, Make/n8n, …) |
 | Morning brief | `majordomo brief` — reminders, new mail, recent memory, templated from real state | Nothing |
 | Self-filing memory | Opt-in (`MAJORDOMO_AUTO_MEMORY`); a narrow extractor files stated facts after a turn | Nothing |
@@ -193,6 +195,7 @@ Traffic stays inside your encrypted tailnet — nothing is published to the publ
 | `workspace_list`, `workspace_read`, `read_document` | Look inside the workspace; read Office files | Read-only |
 | `list_reminders` | Show active reminders | Read-only |
 | `mail_list`, `mail_read`, `mail_search` | List, read, and search the inbox | Read-only |
+| `media_status`, `media_list_jobs`, `media_get_job` | Check the local Muse4AI app; list and inspect its generation jobs | Read-only |
 | `memory_remember` | Write one entry to long-term memory | **Acting** |
 | `mail_draft`, `mail_send` | Save an email draft in the workspace; send an email | **Acting** |
 | `workspace_write` | Write a file in the workspace | **Acting** |
@@ -200,6 +203,7 @@ Traffic stays inside your encrypted tailnet — nothing is published to the publ
 | `generate_image` | Generate an image into the workspace | **Acting** |
 | `schedule_reminder`, `cancel_reminder` | Set or cancel reminders | **Acting** |
 | `delegate_task` | Hand a coding task to a teammate (an installed agent CLI) in the workspace | **Acting** |
+| `media_generate_image`, `media_generate_video`, `media_extend_video` | Generate or extend media through the local Muse4AI app, on your Muse session | **Acting** |
 | `<server>__<tool>` (MCP) | Whatever the connected server offers | Follows its `readOnlyHint` |
 
 **Acting** tools run only when the run approves them: the interactive CLI asks per call, the web API takes an `approve` flag per message, and the demo auto-approves because every backend behind it is a fake. A declined call is reported to the model as declined — the agent never quietly retries its way around you.
@@ -273,6 +277,14 @@ Majordomo launches each server over stdio, does the initialize handshake, and re
 
 And as a *server*: `majordomo mcp-server` serves Majordomo's own tools over stdio to any MCP client — another agent can search this one's memory, read its workspace, and use its web tools. The gate holds on this side too: only read-only tools are served unless the operator starts it with `--allow-write`. The example config above points one Majordomo at another; the server side never loads an MCP config itself, so the loop cannot recurse.
 
+## Media through Muse4AI
+
+Majordomo can also make pictures and videos — by asking another local app to do it. [Muse4AI](https://github.com/andrew-babo/muse4ai) (MIT, by Andrew Babo) is a Windows desktop app that queues image and video generations on **your own signed-in Muse session** and serves them over a local REST API. Majordomo's media adapter (`src/majordomo/media.py`, standard library only) talks to that API; no Muse4AI code is in this repository, and Majordomo is not affiliated with Meta or with Muse4AI — Muse4AI is the external engine, credited here and in the module.
+
+The tools: `media_status`, `media_list_jobs`, and `media_get_job` are read-only; `media_generate_image`, `media_generate_video`, and `media_extend_video` are **acting** tools — each one spends a generation of your Muse session, so each passes the approval gate. A generation tool submits its job, polls it to completion (bounded by `MAJORDOMO_MEDIA_TIMEOUT`, default 300s), and returns the job id, the final status, and the output's asset id and signed download link. If the wait runs out, the tool says the job is still running and gives its id — never a made-up success.
+
+Setup: install and run Muse4AI on the same machine, create a key in its **Settings → API & agent** screen, then set `MAJORDOMO_MUSE4AI_KEY` (and `MAJORDOMO_MUSE4AI_URL` if it serves somewhere other than `http://127.0.0.1:47821`). The key is sent only in the `Authorization` header — never logged, printed, or included in a tool result. Honest limits: Muse4AI must be installed and running on the same machine (it is a Windows desktop app), generations run through your Muse session via that app, and with no key set — or the app not running — the media tools say exactly that instead of pretending. `MAJORDOMO_MEDIA=off` removes the tools entirely.
+
 ## What runs where
 
 One process does everything; the **data directory** (default `~/.majordomo`, or `/data` in Docker) holds the whole life of the agent:
@@ -332,6 +344,10 @@ Everything is an environment variable (or a `.env` file) — see [`.env.example`
 | `MAJORDOMO_TEAMMATES` | on | `off` removes the `delegate_task` tool entirely |
 | `MAJORDOMO_TEAMMATE_TIMEOUT` | `600` | Seconds before a delegated run is stopped |
 | `MAJORDOMO_NOTIFY_WEBHOOK` | — | Webhook URL for initiative notifications (unset = off) |
+| `MAJORDOMO_MEDIA` | on | `off` removes the Muse4AI media tools entirely |
+| `MAJORDOMO_MUSE4AI_URL` | `http://127.0.0.1:47821` | Where the local Muse4AI app serves its API |
+| `MAJORDOMO_MUSE4AI_KEY` | — | API key from Muse4AI's Settings → API & agent screen (never logged or printed) |
+| `MAJORDOMO_MEDIA_TIMEOUT` | `300` | Seconds a generation tool waits on its job before reporting it still running |
 | `MAJORDOMO_HOST` / `MAJORDOMO_PORT` | `127.0.0.1` / `8080` | Web app bind |
 
 ## Develop and test
@@ -401,6 +417,7 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 │   ├── scheduler.py            # Reminders and the firing engine
 │   ├── initiative.py           # Mail watch + escalation, run per tick
 │   ├── teammates.py            # The agent-CLI bridge: characters, detection, runs, transcripts
+│   ├── media.py                # Muse4AI client (stdlib) + the media tools
 │   ├── notify.py               # Outbound webhook notifications (best effort)
 │   ├── brief.py                # The deterministic morning brief
 │   ├── mcp_client.py           # stdio MCP client

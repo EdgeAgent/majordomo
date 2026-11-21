@@ -4,6 +4,45 @@ All notable changes to Majordomo are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] — 2026-11-21
+
+### Added
+
+- **Media generation through Muse4AI.** Majordomo can now ask a
+  locally running [Muse4AI](https://github.com/andrew-babo/muse4ai)
+  app (MIT, by Andrew Babo) to generate images and videos on the
+  operator's own signed-in Muse session, over that app's local REST
+  API. New module `src/majordomo/media.py`: a standard-library-only
+  client (`urllib` — no new dependencies) coded against Muse4AI's
+  published OpenAPI contract, plus six tools. Read-only:
+  `media_status` (is the app running, which Muse accounts and
+  capabilities does it report), `media_list_jobs`, `media_get_job`.
+  Acting, behind the approval gate like every other write:
+  `media_generate_image` and `media_generate_video` (submit a job,
+  then poll it to completion — a bounded wait, after which the tool
+  reports the job as still running with its id, never as a fake
+  success), and `media_extend_video` (extend a finished video in its
+  own Muse conversation via its output asset id). The read-only
+  tools are exposed by the built-in MCP server by default; the
+  acting ones join only with `--allow-write`, as usual.
+- **Configuration.** `MAJORDOMO_MUSE4AI_URL` (default
+  `http://127.0.0.1:47821`), `MAJORDOMO_MUSE4AI_KEY` (the `msk_…`
+  key created in Muse4AI's Settings → API & agent screen — sent
+  only in the `Authorization` header, never logged, printed, or
+  included in a tool result; a test proves it), and
+  `MAJORDOMO_MEDIA_TIMEOUT` (default 300s, the generation poll
+  bound). `MAJORDOMO_MEDIA=off` removes the tools entirely. With no
+  key set or the app not running, the tools say exactly that —
+  the same honest posture as the unconfigured mail backend.
+- **Honest limits.** Muse4AI is a separate Windows desktop app and
+  must be installed and running on the same machine; Majordomo
+  contains none of its code and is not affiliated with Meta or with
+  Muse4AI. Generations spend the operator's own Muse session
+  through that app, which is why the acting tools sit behind the
+  approval gate. The one contract shape Muse4AI's OpenAPI document
+  leaves unspecified — the `GET /v1/jobs` list body — is parsed
+  defensively (either `{"jobs": […]}` or a bare list).
+
 ## [0.7.1] — 2026-11-21
 
 ### Added

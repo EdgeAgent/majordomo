@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "majordomo"
-version = "0.7.1"
+version = "0.8.0"
 description = "Your self-hosted personal AI agent — lives on your machine, remembers what matters, and gets the work done."
 readme = "README.md"
 requires-python = ">=3.11"

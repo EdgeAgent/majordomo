@@ -20,6 +20,7 @@ from .imagetools import FakeImageBackend, OpenAIImageBackend, register_image_too
 from .initiative import InitiativeEngine
 from .mailtools import MailBackend, build_mail_backend, register_mail_tools
 from .mcp_client import MCPClient, load_mcp_config, register_mcp_tools
+from .media import build_media_client, register_media_tools
 from .memory import MemoryStore
 from .notify import Notifier
 from .providers import Provider, build_provider
@@ -107,6 +108,13 @@ def build_runtime(
     mail_backend = build_mail_backend(settings, is_offline)
     register_mail_tools(registry, mail_backend, workspace)
     register_schedule_tools(registry, schedules, lambda: datetime.now(UTC))
+
+    # Media tools: generation is delegated to a locally running
+    # Muse4AI app (see media.py). Registered unless MAJORDOMO_MEDIA
+    # is off; with the app down or no key set, the tools report that
+    # honestly, the same posture as the unconfigured mail backend.
+    if settings.media:
+        register_media_tools(registry, build_media_client(settings), timeout=settings.media_timeout)
 
     # Teammates: the delegate_task tool exists when teammates are on
     # and at least one known agent CLI is detected — or when the

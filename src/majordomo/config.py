@@ -85,6 +85,24 @@ class Settings(BaseSettings):
     # that runs past it is stopped.
     teammate_timeout: int = 600
 
+    # Media generation via Muse4AI: a separate local app
+    # (https://github.com/andrew-babo/muse4ai, a Windows desktop app)
+    # that queues image/video generations on the operator's own Muse
+    # session and serves them over a local REST API. Majordomo only
+    # talks HTTP to it — no Muse4AI code lives in this repo. On by
+    # default; with the app not running (or no key set) the media
+    # tools say so honestly instead of pretending.
+    # MAJORDOMO_MEDIA=off removes the tools entirely.
+    media: bool = True
+    muse4ai_url: str = "http://127.0.0.1:47821"
+    # The API key from Muse4AI's Settings → API & agent screen
+    # (starts with msk_). Never logged or printed.
+    muse4ai_key: str | None = None
+    # How long a generation tool waits on its job, in seconds, before
+    # reporting the job as still running (with its id, so the result
+    # can be picked up later with media_get_job).
+    media_timeout: int = 300
+
     # Notifications: a webhook URL that accepts a JSON POST
     # ({"title", "body", "source": "majordomo"}). The daemon sends
     # one when the initiative engine digests new mail or escalates an
