@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" role="img" aria-labelledby="title desc">
+  <title id="title">Majordomo banner</title>
+  <desc id="desc">Majordomo — your self-hosted personal AI agent. Navy, gold, and teal.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#060A14"/>
+      <stop offset="1" stop-color="#111B36"/>
+    </linearGradient>
+    <linearGradient id="rule" x1="80" y1="0" x2="1200" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2DD4BF"/>
+      <stop offset="1" stop-color="#E8B84B"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" fill="url(#bg)"/>
+  <g transform="translate(70 60) scale(0.78)">
+    <circle cx="128" cy="62" r="10" fill="#E8B84B"/>
+    <path d="M64 166 C64 106 92 76 128 76 C164 76 192 106 192 166 L64 166 Z" fill="#E8B84B"/>
+    <rect x="50" y="174" width="156" height="12" rx="6" fill="#E8B84B"/>
+    <circle cx="128" cy="202" r="10" fill="#2DD4BF"/>
+  </g>
+  <text x="330" y="150" font-family="Georgia, 'Times New Roman', serif" font-size="84" font-weight="700" fill="#F2F4F8" letter-spacing="6">MAJORDOMO</text>
+  <text x="334" y="205" font-family="Verdana, Geneva, sans-serif" font-size="30" fill="#2DD4BF">Your self-hosted personal AI agent</text>
+  <rect x="80" y="272" width="1120" height="4" fill="url(#rule)"/>
+</svg>

@@ -1,0 +1,20 @@
+services:
+  majordomo:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      # Local-first default: a local Ollama on the host. From inside the
+      # container, the host is host.docker.internal — or switch the
+      # provider to "openai" and set MAJORDOMO_OPENAI_API_KEY.
+      MAJORDOMO_PROVIDER: "ollama"
+      MAJORDOMO_OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+      MAJORDOMO_OLLAMA_MODEL: "llama3.1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - majordomo-data:/data
+    restart: unless-stopped
+
+volumes:
+  majordomo-data:

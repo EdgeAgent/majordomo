@@ -1,1 +1,16 @@
-RlJPTSBweXRob246My4xMi1zbGltCgpXT1JLRElSIC9hcHAKCkNPUFkgcHlwcm9qZWN0LnRvbWwgUkVBRE1FLm1kIExJQ0VOU0UgLi8KQ09QWSBzcmMgLi9zcmMKUlVOIHB5dGhvbiAtbSBwaXAgaW5zdGFsbCAtLW5vLWNhY2hlLWRpciAiLltkb2N1bWVudHNdIgoKIyBBbGwgc3RhdGUgKG1lbW9yeSwgc2Vzc2lvbnMsIHNjaGVkdWxlcywgd29ya3NwYWNlKSBsaXZlcyBoZXJlLgpFTlYgTUFKT1JET01PX0RBVEFfRElSPS9kYXRhIFwKICAgIE1BSk9SRE9NT19IT1NUPTAuMC4wLjAgXAogICAgTUFKT1JET01PX1BPUlQ9ODA4MApWT0xVTUUgWyIvZGF0YSJdCkVYUE9TRSA4MDgwCgpDTUQgWyJtYWpvcmRvbW8iLCAic2VydmUiXQo=
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY pyproject.toml README.md LICENSE ./
+COPY src ./src
+RUN python -m pip install --no-cache-dir ".[documents]"
+
+# All state (memory, sessions, schedules, workspace) lives here.
+ENV MAJORDOMO_DATA_DIR=/data \
+    MAJORDOMO_HOST=0.0.0.0 \
+    MAJORDOMO_PORT=8080
+VOLUME ["/data"]
+EXPOSE 8080
+
+CMD ["majordomo", "serve"]

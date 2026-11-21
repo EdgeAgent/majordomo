@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">Majordomo — social preview (1280x640)</title>
+  <desc id="desc">Your self-hosted personal AI agent — lives on your machine, remembers what matters, and gets the work done. Edge Agency navy, gold, and teal.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#060A14"/>
+      <stop offset="1" stop-color="#111B36"/>
+    </linearGradient>
+    <linearGradient id="rule" x1="80" y1="0" x2="1200" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2DD4BF"/>
+      <stop offset=".5" stop-color="#58B9FF"/>
+      <stop offset="1" stop-color="#E8B84B"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <g transform="translate(90 70) scale(0.62)">
+    <circle cx="128" cy="62" r="10" fill="#E8B84B"/>
+    <path d="M64 166 C64 106 92 76 128 76 C164 76 192 106 192 166 L64 166 Z" fill="#E8B84B"/>
+    <rect x="50" y="174" width="156" height="12" rx="6" fill="#E8B84B"/>
+    <circle cx="128" cy="202" r="10" fill="#2DD4BF"/>
+  </g>
+  <text x="290" y="150" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="700" fill="#F2F4F8" letter-spacing="5">MAJORDOMO</text>
+  <text x="294" y="196" font-family="Verdana, Geneva, sans-serif" font-size="24" fill="#8FA3C8">A PERSONAL AI AGENT THAT WORKS FOR ONE PERSON: YOU</text>
+  <rect x="80" y="248" width="1120" height="4" fill="url(#rule)"/>
+  <text x="80" y="360" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="700" fill="#F2F4F8">Your self-hosted personal AI agent —</text>
+  <text x="80" y="432" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="700" fill="#F2F4F8">lives on your machine, remembers</text>
+  <text x="80" y="504" font-family="Georgia, 'Times New Roman', serif" font-size="58" font-weight="700" fill="#F2F4F8">what matters, and gets the work done.</text>
+  <text x="80" y="572" font-family="Verdana, Geneva, sans-serif" font-size="26" fill="#2DD4BF">Local-first · Memory in plain files · Tools behind an approval gate · MCP inside</text>
+</svg>

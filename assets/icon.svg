@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Majordomo icon</title>
+  <desc id="desc">A gold service bell on deep navy — the majordomo's bell, rung when you need something done.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#060A14"/>
+      <stop offset="1" stop-color="#111B36"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="248" height="248" rx="48" fill="url(#bg)" stroke="#E8B84B" stroke-width="4"/>
+  <circle cx="128" cy="62" r="10" fill="#E8B84B"/>
+  <path d="M64 166 C64 106 92 76 128 76 C164 76 192 106 192 166 L64 166 Z" fill="#E8B84B"/>
+  <rect x="50" y="174" width="156" height="12" rx="6" fill="#E8B84B"/>
+  <circle cx="128" cy="202" r="10" fill="#2DD4BF"/>
+</svg>
