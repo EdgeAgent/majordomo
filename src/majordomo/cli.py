@@ -6,6 +6,7 @@
     majordomo schedule ...  manage reminders
     majordomo serve       the web app (chat page + API)
     majordomo daemon      always-on mode: fire due reminders forever
+    majordomo brief       today's brief: reminders, mail, memory
     majordomo demo        the scripted day on the fake provider
     majordomo version
 
@@ -124,13 +125,16 @@ def daemon(
 
     Each tick is the web app's background loop without the web app:
     fire everything due, print it, and drop it into the ``inbox``
-    session. Run it as a service (see docs/always-on.md) and reminders
-    land even when no window is open.
+    session — then the initiative engine takes its turn (mail watch
+    and reminder escalation; see docs/always-on.md). Run it as a
+    service and reminders and new mail land even when no window is
+    open.
     """
     runtime = _runtime()
     try:
         while True:
-            fired = runtime.schedules.fire_due(datetime.now(UTC))
+            now = datetime.now(UTC)
+            fired = runtime.schedules.fire_due(now)
             for reminder in fired:
                 console.print(f"⏰ {reminder.text}")
                 runtime.sessions.append(
@@ -140,11 +144,40 @@ def daemon(
                         "content": f"⏰ Reminder: {reminder.text}",
                     },
                 )
+            for line in runtime.initiative.tick(now, fired):
+                console.print(line, markup=False)
             if once:
                 if not fired:
                     console.print("Nothing due.")
                 break
             time.sleep(interval)
+    finally:
+        runtime.close()
+
+
+@app.command()
+def brief() -> None:
+    """Print today's brief — reminders, mail, memory — and save it.
+
+    Assembled from real state by a deterministic template (no model):
+    active reminders with overdue ones called out, the new-mail count
+    and latest subjects, and the most recent memory entries. Saved to
+    the workspace as ``brief-YYYY-MM-DD.md``.
+    """
+    from .brief import build_brief
+
+    runtime = _runtime()
+    try:
+        now = datetime.now(UTC)
+        text = build_brief(
+            schedules=runtime.schedules,
+            backend=runtime.mail_backend,
+            memory=runtime.memory,
+            state_path=runtime.settings.initiative_path,
+            now=now,
+        )
+        runtime.workspace.write(f"brief-{now:%Y-%m-%d}.md", text)
+        console.print(text, markup=False)
     finally:
         runtime.close()
 

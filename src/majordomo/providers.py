@@ -89,12 +89,24 @@ class FakeProvider:
         if self._script:
             return self._script.pop(0)
 
-        # Tool results just came back: summarize them and stop.
+        available = _tool_names(tools)
+
+        # A multi-step chain ("brief me", "look up X and save it") may
+        # have a next step — on a fresh user turn (step one) or right
+        # after a tool result came back (the following steps).
+        chain_call = self._next_chain_call(messages, available)
+        if chain_call is not None:
+            return chain_call
+
+        # Tool results just came back: summarize everything the tools
+        # reported since the user's message, and stop.
         if messages and messages[-1].get("role") == "tool":
             lines = []
             for message in reversed(messages):
-                if message.get("role") != "tool":
+                if message.get("role") == "user":
                     break
+                if message.get("role") != "tool":
+                    continue
                 content = str(message.get("content", "")).strip().replace("\n", " ")
                 lines.append(f"- {message.get('name', 'tool')}: {content[:240]}")
             lines.reverse()
@@ -105,7 +117,6 @@ class FakeProvider:
             if message.get("role") == "user":
                 user_text = str(message.get("content", ""))
                 break
-        available = _tool_names(tools)
         intent = self._intent(user_text)
         if intent is not None and intent[0] in available:
             return self._call(intent[0], intent[1])
@@ -113,10 +124,88 @@ class FakeProvider:
             text=(
                 f'You said: "{user_text}" — I\'m the built-in fake provider, so this is a '
                 "canned reply. Connect Ollama or an OpenAI-compatible provider for real "
-                "answers; ask me to remember, search, fetch, write, schedule, or draw and "
-                "I'll use the tools instead."
+                "answers; ask me to remember, search, fetch, write, schedule, check mail, "
+                "brief you, or draw and I'll use the tools instead."
             )
         )
+
+    # -- multi-step chains ----------------------------------------------
+    #
+    # Two requests need more than one tool: a brief is reminders *and*
+    # mail, and "look up X and save it" is a search *then* a write.
+    # The agent loop already supports many steps; the fake just has to
+    # ask for the steps in order. Progress is read off the history:
+    # the tool calls made since the last user message are the steps
+    # already done, so the next one is simply the next in the list.
+
+    def _next_chain_call(
+        self, messages: list[Message], available: set[str]
+    ) -> ProviderResponse | None:
+        user_index = -1
+        for index in range(len(messages) - 1, -1, -1):
+            if messages[index].get("role") == "user":
+                user_index = index
+                break
+        if user_index < 0:
+            return None
+        user_text = str(messages[user_index].get("content", ""))
+        steps = self._chain_steps(user_text, messages[user_index + 1 :])
+        if steps is None:
+            return None
+        called: list[str] = []
+        for message in messages[user_index + 1 :]:
+            for call in message.get("tool_calls") or []:
+                called.append(str(call.get("name", "")))
+        if called != [name for name, _ in steps[: len(called)]]:
+            return None  # some other flow is running; don't hijack it
+        if len(called) >= len(steps):
+            return None  # chain finished; the caller summarizes
+        name, arguments = steps[len(called)]
+        if name not in available:
+            return None
+        return self._call(name, arguments)
+
+    def _chain_steps(
+        self, text: str, since_user: list[Message]
+    ) -> list[tuple[str, dict[str, Any]]] | None:
+        lowered = text.lower()
+        brief_phrases = (
+            "brief me",
+            "morning brief",
+            "daily brief",
+            "what's on today",
+            "whats on today",
+            "what is on today",
+        )
+        if any(phrase in lowered for phrase in brief_phrases):
+            return [("list_reminders", {}), ("mail_list", {"limit": 10})]
+
+        save_match = re.search(r"(?i)(?:look up|research)\s+(.+?)\s+and save\b", text)
+        if save_match:
+            query = save_match.group(1).strip().rstrip(".?!")
+            if not query:
+                return None
+            steps: list[tuple[str, dict[str, Any]]] = [("web_search", {"query": query})]
+            result = ""
+            for message in since_user:
+                if message.get("role") == "tool" and message.get("name") == "web_search":
+                    result = str(message.get("content", ""))
+            if result:
+                steps.append(
+                    (
+                        "workspace_write",
+                        {
+                            "path": f"{self._slug(query)}-notes.md",
+                            "content": (
+                                f"# Research notes: {query}\n\n{result}\n\n"
+                                "(Saved by Majordomo's fake provider from the "
+                                "web_search result above.)\n"
+                            ),
+                        },
+                    )
+                )
+            return steps
+        return None
 
     def _intent(self, text: str) -> tuple[str, dict[str, Any]] | None:
         lowered = text.lower()
@@ -141,6 +230,29 @@ class FakeProvider:
                 else "fact"
             )
             return "memory_remember", {"kind": kind, "text": body}
+
+        # Mail intents are phrase-shaped on purpose: a sentence that
+        # merely mentions mail ("I sent the mail yesterday") matches
+        # none of these and falls through to the canned reply.
+        mail_search = re.search(r"(?i)search (?:my )?(?:mail|email|inbox) for (.+)", text)
+        if mail_search:
+            query = mail_search.group(1).strip().rstrip("?.! ")
+            if query:
+                return "mail_search", {"query": query}
+
+        mail_list_phrases = (
+            "check my mail",
+            "check my email",
+            "check my inbox",
+            "any new mail",
+            "any new email",
+            "any unread mail",
+            "any unread email",
+            "show my inbox",
+            "read my inbox",
+        )
+        if any(phrase in lowered for phrase in mail_list_phrases):
+            return "mail_list", {"limit": 10}
 
         if url_match and ("fetch" in lowered or "read" in lowered or "open" in lowered):
             return "web_fetch", {"url": url_match.group(0)}

@@ -10,6 +10,12 @@
 <p align="center">
   <img src="assets/banner.jpg" alt="Majordomo — your self-hosted personal AI agent" width="100%">
 </p>
+<p align="center">
+  <img src="assets/demo.gif" alt="Majordomo at work — checking mail, filing a fact by himself, recalling it in a new session, noticing new mail on his own, and printing a brief" width="88%">
+  <br>
+  <em>Domo at work — a real run on the built-in offline demo data: he checks mail, files a fact by himself, recalls it in a brand-new session, notices new mail on his own, and prints his brief.</em>
+</p>
+
 
 
 <p align="center">
@@ -48,6 +54,16 @@ Majordomo takes the other side of that trade:
 - **File its own facts — only if you opt in.** With `MAJORDOMO_AUTO_MEMORY=true`, simple statements in your own messages ("my favourite coffee is ...", "remember ...") are filed to memory after the turn. The extractor is deliberately narrow: questions, commands, and chit-chat are never filed. Off by default.
 - **Plug in MCP servers** — point Majordomo at a JSON config and every tool those servers expose joins the registry, approval gate included. The example config points Majordomo at a second Majordomo — it is an MCP server itself (`majordomo mcp-server`).
 
+## Takes initiative
+
+A majordomo who only answers when spoken to is a search box. While the daemon (or the web app) is running, Majordomo also works the room on its own — deterministically, no model required, and read-only: it never sends mail and never touches an acting tool on its own initiative.
+
+- **Mail watch.** Every tick polls the mailbox. A message that has never been seen before lands in your inbox session as a one-line digest — `📬 New mail from Ada Lovelace: Notes on the Analytical Engine`. The first tick only sets the baseline, so the mail already sitting there isn't "news".
+- **Escalation.** A reminder that fired more than two hours ago and is still unacknowledged is surfaced once more — `⏰ Still waiting: ...` — and never again. (Acknowledged, precisely: the reminder left the schedule store because you cancelled or cleared it. Firing alone doesn't count as you having seen it.)
+- **The morning brief.** `majordomo brief` assembles today from real state — active reminders with overdue ones called out, how much mail is new plus the latest subjects, and your most recent memory entries — prints it, and saves it to the workspace as `brief-YYYY-MM-DD.md`. No LLM: a template over the same stores, so it works fully offline.
+
+The engine's memory is one small JSON file (`initiative.json` in the data directory): seen mail ids and the reminders it watched fire. Delete it and the next tick simply re-baselines.
+
 ## Feature map
 
 | Capability | How it works | Needs |
@@ -62,6 +78,8 @@ Majordomo takes the other side of that trade:
 | Reminders | JSON store; `schedule run-due` CLI + the web app's background tick | Nothing |
 | Mail | IMAP/SMTP tools (stdlib only) behind a backend protocol; fake mailbox offline, honest "not configured" otherwise | Your mail account for live use |
 | Always-on daemon | `majordomo daemon` ticks the scheduler; systemd + Task Scheduler files in `deploy/` | Nothing |
+| Initiative | Mail watch digests + one-time escalation of unacknowledged reminders, per tick; state in `initiative.json` | A running daemon or web app |
+| Morning brief | `majordomo brief` — reminders, new mail, recent memory, templated from real state | Nothing |
 | Self-filing memory | Opt-in (`MAJORDOMO_AUTO_MEMORY`); a narrow extractor files stated facts after a turn | Nothing |
 | MCP client | stdio JSON-RPC client; remote tools namespaced `<server>__<tool>`, `readOnlyHint` honoured | Any MCP server |
 | Web UI + API | FastAPI, one self-contained page, `/chat` `/sessions` `/memory` `/health` | Nothing |
@@ -182,6 +200,7 @@ One process does everything; the **data directory** (default `~/.majordomo`, or 
 ├── memory/          facts.md · preferences.md · notes.md   (yours to edit)
 ├── sessions/        one JSON file per conversation         (recall searches these)
 ├── schedules.json   reminders
+├── initiative.json  initiative state: seen mail ids, fired reminders
 └── workspace/       the only folder the file/document tools may touch
     └── images/      generated images land here
 ```
@@ -217,7 +236,7 @@ The suite runs entirely on fakes — the fake provider, canned web pages, a fake
 
 Majordomo is a **single-user** agent by design: no accounts, no multi-tenancy, no permission system beyond the approval gate. Run one per person, on their machine.
 
-There is **no browser automation in v1** — no Chromium form-driving, no clicking through websites. Web research is search + readable fetch, and anything richer belongs in an MCP server you connect (that's what the protocol is for). Image generation ships with a placeholder backend; live images need your own provider key and run on your bill. The fake provider is a demo and testing tool — it pattern-matches obvious requests and answers the rest with a canned line that says what it is. Real conversation needs Ollama or an API key.
+There is **no browser automation in v1** — no Chromium form-driving, no clicking through websites. Web research is search + readable fetch, and anything richer belongs in an MCP server you connect (that's what the protocol is for). Image generation ships with a placeholder backend; live images need your own provider key and run on your bill. The fake provider is a demo and testing tool — it pattern-matches obvious requests (now including mail checks, briefs, and look-up-and-save research) and answers the rest with a canned line that says what it is. Real conversation needs Ollama or an API key. The initiative engine and the brief are not the fake provider: they are deterministic code over real state, and they work the same with any provider.
 
 Memory recall is honest token search over your files, not embeddings: it finds what shares words with your question, and it returns nothing rather than guessing. The scheduler fires while a Majordomo listener is running: the web app ticks every 30 seconds, `majordomo daemon` ticks forever on its own, and the shipped systemd / Task Scheduler files (see `docs/always-on.md`) make that listener a real always-on service. And the approval gate is a seatbelt, not a vault: it stops the agent from acting unapproved, but the workspace sandbox and your own backups are what protect your files.
 
@@ -246,6 +265,8 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 │   ├── doctoolkit.py           # Word / PowerPoint / Excel (documents extra)
 │   ├── imagetools.py           # Image backends: fake + OpenAI-compatible
 │   ├── scheduler.py            # Reminders and the firing engine
+│   ├── initiative.py           # Mail watch + escalation, run per tick
+│   ├── brief.py                # The deterministic morning brief
 │   ├── mcp_client.py           # stdio MCP client
 │   ├── runtime.py              # Wiring: settings in, agent out
 │   ├── webapp.py               # FastAPI app + the single-page chat UI

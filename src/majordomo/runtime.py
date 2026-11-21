@@ -17,7 +17,8 @@ from .coretools import register_memory_tools
 from .doctoolkit import register_document_tools
 from .filetools import Workspace, register_file_tools
 from .imagetools import FakeImageBackend, OpenAIImageBackend, register_image_tools
-from .mailtools import build_mail_backend, register_mail_tools
+from .initiative import InitiativeEngine
+from .mailtools import MailBackend, build_mail_backend, register_mail_tools
 from .mcp_client import MCPClient, load_mcp_config, register_mcp_tools
 from .memory import MemoryStore
 from .providers import Provider, build_provider
@@ -57,6 +58,8 @@ class Runtime:
     sessions: SessionStore
     schedules: ScheduleStore
     workspace: Workspace
+    mail_backend: MailBackend
+    initiative: InitiativeEngine
     mcp_clients: list[MCPClient] = field(default_factory=list)
 
     def close(self) -> None:
@@ -94,8 +97,16 @@ def build_runtime(
             image_backend = FakeImageBackend()
             image_is_fake = True
     register_image_tools(registry, workspace, image_backend, image_is_fake)
-    register_mail_tools(registry, build_mail_backend(settings, is_offline), workspace)
+    mail_backend = build_mail_backend(settings, is_offline)
+    register_mail_tools(registry, mail_backend, workspace)
     register_schedule_tools(registry, schedules, lambda: datetime.now(UTC))
+    initiative = InitiativeEngine(
+        backend=mail_backend,
+        schedules=schedules,
+        sessions=sessions,
+        state_path=settings.initiative_path,
+        now_fn=lambda: datetime.now(UTC),
+    )
 
     mcp_clients: list[MCPClient] = []
     if settings.mcp_config is not None:
@@ -126,5 +137,7 @@ def build_runtime(
         sessions=sessions,
         schedules=schedules,
         workspace=workspace,
+        mail_backend=mail_backend,
+        initiative=initiative,
         mcp_clients=mcp_clients,
     )

@@ -16,6 +16,51 @@ into the `inbox` session, where the next chat (terminal or web) shows
 it. `--once` is the smoke test: run it by hand before installing the
 service and you should see your due reminders, or `Nothing due.`
 
+## Initiative: what else each tick does
+
+Firing reminders is only half the tick. Right after it, the
+initiative engine (`src/majordomo/initiative.py`) takes its turn —
+in the daemon and in the web app's background tick alike. Both jobs
+are read-only: the engine never sends mail and never calls an acting
+tool.
+
+- **Mail watch.** The tick polls the mailbox (the same backend the
+  mail tools use). A message whose id has never been seen gets a
+  one-line digest in the `inbox` session: `📬 New mail from <sender>:
+  <subject>`. The daemon also prints it. The very first tick only
+  establishes the baseline — everything already in the mailbox is
+  history, not news — so a fresh install does not flood you with its
+  own inbox. An unconfigured or unreachable mailbox is skipped
+  quietly; the tick carries on.
+- **Escalation.** The engine records every reminder it watches fire.
+  If one is still unacknowledged more than **two hours** later, the
+  tick surfaces it once more — `⏰ Still waiting: <text>` — and marks
+  it escalated, so it never repeats. *Acknowledged* has a precise
+  meaning here, because the schedule store has no ack button: the
+  reminder left the store (you cancelled or cleared it — a deliberate
+  action). A one-time reminder sitting in the store as `done` was
+  only *fired*; that does not count as you having seen it. A
+  recurring reminder that fires again restarts its own clock.
+
+### The state file
+
+The engine's memory is one small JSON file, `initiative.json`, in
+the data directory:
+
+```json
+{
+  "seen_mail_ids": ["fake-1", "fake-2"],
+  "fired": {
+    "a1b2c3d4": {"text": "Call the bank", "fired_at": "2026-11-21T09:00:00+00:00", "escalated": false}
+  }
+}
+```
+
+It is safe to inspect, edit, or delete: deleting it just makes the
+next tick re-baseline the mail watch and forget any pending
+escalations. The morning brief (`majordomo brief`) reads the same
+file to count how much of your mail is new.
+
 ## Linux: systemd user service
 
 A ready-made unit ships at `deploy/majordomo.service`:

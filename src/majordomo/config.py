@@ -76,6 +76,11 @@ class Settings(BaseSettings):
     def schedules_path(self) -> Path:
         return self.data_dir / "schedules.json"
 
+    @property
+    def initiative_path(self) -> Path:
+        """The initiative engine's state: seen mail ids, fired reminders."""
+        return self.data_dir / "initiative.json"
+
     def ensure_dirs(self) -> None:
         """Create the data tree on first run."""
         for path in (self.data_dir, self.workspace_dir, self.memory_dir, self.sessions_dir):

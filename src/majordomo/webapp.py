@@ -11,7 +11,8 @@ on a phone browser) and four endpoints:
 Approvals ride on the request: ``approve: true`` approves acting tools
 for that one message; without it, acting tools are declined and the
 agent says so. A background tick fires due reminders into the
-``inbox`` session every 30 seconds.
+``inbox`` session every 30 seconds and runs the initiative engine
+(mail watch + escalation) alongside.
 
 Reach it from a phone with Tailscale Serve — see the README.
 """
@@ -123,7 +124,8 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
             while True:
                 await asyncio.sleep(30)
                 try:
-                    fired = runtime.schedules.fire_due(datetime.now(UTC))
+                    now = datetime.now(UTC)
+                    fired = runtime.schedules.fire_due(now)
                     for reminder in fired:
                         runtime.sessions.append(
                             "inbox",
@@ -132,6 +134,9 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
                                 "content": f"⏰ Reminder: {reminder.text}",
                             },
                         )
+                    # Initiative runs with the tick: mail watch +
+                    # escalation append their own lines to the inbox.
+                    runtime.initiative.tick(now, fired)
                 except Exception:  # the tick must never kill the app; it logs instead
                     log.exception("scheduler.tick_failed")
 

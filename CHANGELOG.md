@@ -8,6 +8,27 @@ follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Initiative engine (`src/majordomo/initiative.py`): run by the
+  daemon and the web app tick alongside reminder firing. A mail watch
+  digests each never-before-seen message into the inbox session as a
+  one-line "📬 New mail from …" note (the first tick only establishes
+  the baseline), and a reminder still unacknowledged two hours after
+  the engine watched it fire is re-surfaced exactly once with a
+  "⏰ Still waiting" note. State (seen mail ids, fired reminders)
+  lives in `initiative.json` in the data directory. The engine is
+  read-only: it never sends mail and never calls an acting tool.
+- `majordomo brief`: a morning brief assembled deterministically from
+  real state — active reminders (overdue called out), new-mail count
+  and latest subjects, and the most recent memory entries — printed
+  and saved to the workspace as `brief-YYYY-MM-DD.md`. No model
+  involved; works fully offline.
+- A smarter fake provider: mail intents ("check my mail", "any new
+  email" → `mail_list`; "search my mail for X" → `mail_search`, with
+  phrase-shaped matching so mere mentions of mail don't trigger), a
+  two-step brief chain ("brief me" / "what's on today" →
+  `list_reminders` then `mail_list` in one turn), and a two-step
+  research chain ("look up X and save it" → `web_search` then
+  `workspace_write` of the result).
 - Mail tools: `mail_list` / `mail_read` / `mail_search` (read-only) and
   `mail_draft` / `mail_send` (acting, approval-gated), behind an
   injectable backend — IMAP/SMTP from the standard library via the new
