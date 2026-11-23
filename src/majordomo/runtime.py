@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from .agent import Agent
+from .company import CompanyStore, register_company_tools
 from .config import Settings
 from .coretools import register_memory_tools
 from .doctoolkit import register_document_tools
@@ -27,8 +28,10 @@ from .providers import Provider, build_provider
 from .scheduler import ScheduleStore, register_schedule_tools
 from .self_files import SelfStore
 from .sessions import SessionStore
+from .steprunner import register_step_tools
 from .teammates import AgentStatus, detect_agents, register_teammate_tools
 from .tools import ToolRegistry
+from .videoproject import register_video_tools
 from .webtools import (
     DuckDuckGoSearchBackend,
     FakeHttpClient,
@@ -36,6 +39,7 @@ from .webtools import (
     HttpxHttpClient,
     register_web_tools,
 )
+from .writing import register_writing_tools
 
 # Canned pages for the fake HTTP client (demo and offline runs).
 FAKE_PAGES = {
@@ -115,12 +119,38 @@ def build_runtime(
     # honestly, the same posture as the unconfigured mail backend.
     if settings.media:
         register_media_tools(registry, build_media_client(settings), timeout=settings.media_timeout)
+        # Video projects ride along with the media tools: a JSON scene
+        # spec, validated against the workspace, rendered by the
+        # machine's ffmpeg (see videoproject.py).
+        register_video_tools(registry, workspace_root=settings.workspace_dir)
+
+    # Writing tools are pure text transforms — no backend, no gate.
+    register_writing_tools(registry)
 
     # Teammates: the delegate_task tool exists when teammates are on
     # and at least one known agent CLI is detected — or when the
     # operator explicitly switched teammates on (then missing binaries
     # report "not installed" through the tool instead of the tool
     # silently not existing). MAJORDOMO_TEAMMATES=off removes it.
+    # Company layer + step runner: the roster/board and the journals
+    # are local files, so these tools exist whenever teammates are on
+    # — even on a machine with no agent CLI installed yet, where the
+    # board is how the owner plans the team. Delegation itself still
+    # goes through delegate_task / run_task_steps and the gate.
+    if settings.teammates:
+        register_company_tools(
+            registry,
+            CompanyStore(settings.company_path),
+            teammates_dir=settings.teammates_dir,
+        )
+        register_step_tools(
+            registry,
+            workspace_root=settings.workspace_dir,
+            teammates_dir=settings.teammates_dir,
+            journal_dir=settings.runs_dir,
+            timeout=settings.teammate_timeout,
+        )
+
     teammates = detect_agents()
     if settings.teammates and (
         any(status.available for status in teammates) or "teammates" in settings.model_fields_set

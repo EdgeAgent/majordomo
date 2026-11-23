@@ -4,6 +4,54 @@ All notable changes to Majordomo are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] — 2026-11-23
+
+### Added
+
+- **The company layer** (`src/majordomo/company.py`, pattern: agent-company
+  control planes). A roster and a task board over the teammates, in
+  `company.json` in the data directory. Roster entries carry a role, a
+  standing goal, and a budget cap — a planning figure the summary reports
+  next to the agent's actual run count; Majordomo spends no money itself.
+  Board tasks are queued/running/done/blocked. Tools: `company_summary`
+  and `company_board` (read-only), `company_set_agent`, `company_add_task`,
+  and `company_set_task_status` (acting). Queueing a task runs nothing —
+  delegation still goes through the gated `delegate_task`; there is no
+  second executor.
+- **Step runs** (`src/majordomo/steprunner.py`, pattern: autonomous
+  coding agents). The acting `run_task_steps` tool runs a multi-step plan
+  through one teammate — each step an ordinary delegated run with the same
+  sandbox and timeout — stops at the first failed or timed-out step, and
+  writes a JSON journal of every step to `runs/` in the data directory.
+- **Writing tools** (`src/majordomo/writing.py`, pattern: "unslop"
+  writing skills). `writing_clean` strips stock AI tells with fixed,
+  readable rules (filler openers, stock phrases, the delve/leverage/
+  utilize class, em-dash overuse) and returns the cleaned text;
+  `writing_voice` measures sample texts (sentence count, average sentence
+  length, contraction rate) and can report a draft's stats beside the
+  samples'. Both read-only; no model calls; nothing is sent anywhere.
+- **Video projects** (`src/majordomo/videoproject.py`, pattern:
+  programmatic video). A video described as a JSON spec — text, image,
+  and audio scenes with durations — validated against the workspace
+  (`video_project_validate`, read-only) and rendered to MP4 by the
+  machine's ffmpeg (`video_project_render`, acting). Without ffmpeg the
+  render tool says so plainly; the spec and validator work regardless.
+  Scene media generation stays with the Muse4AI tools; this assembles.
+
+### Fixed
+
+- Documentation gap sweep: the README feature map, tools table, and
+  repository layout and the architecture components table now cover every
+  registered tool and module (the architecture table was also missing
+  `media.py` and `demo.py` from earlier releases).
+
+### Notes
+
+- Still unverified, stated plainly: the Docker image has never been built
+  on a Docker machine (the pip path is the verified one), and no live-model
+  conversation has been run — the suite runs on the fake provider, as
+  before.
+
 ## [0.8.0] — 2026-11-21
 
 ### Added

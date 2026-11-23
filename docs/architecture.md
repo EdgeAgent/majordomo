@@ -33,6 +33,12 @@ what actually happened.
 | `autocapture.py` | Opt-in self-filing memory extractor |
 | `initiative.py` | Mail watch + escalation, run per tick |
 | `teammates.py` | The agent-CLI bridge: character registry, PATH detection, timed subprocess runs, transcripts + notes |
+| `company.py` | The company layer: roster (role/goal/budget cap) + task board in `company.json`, heartbeat summary |
+| `steprunner.py` | Multi-step plans through one teammate: per-step delegated runs, stop-on-failure, `runs/` journals |
+| `writing.py` | Rule-based de-AI text cleaning + voice stats from samples |
+| `media.py` | Muse4AI client (stdlib) + the media generation tools |
+| `videoproject.py` | Video project specs (JSON scenes): validation against the workspace, ffmpeg rendering |
+| `demo.py` | The scripted demo day (fake provider, canned backends) |
 | `notify.py` | Outbound webhook notifications (best effort, failures swallowed) |
 | `brief.py` | The deterministic morning brief |
 | `goals.py` | Goals + next moves, persisted in `goals.json` |

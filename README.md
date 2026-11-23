@@ -131,7 +131,11 @@ The engine's memory is one small JSON file (`initiative.json` in the data direct
 | Always-on daemon | `majordomo daemon` ticks the scheduler; systemd + Task Scheduler files in `deploy/` | Nothing |
 | Initiative | Mail watch digests + one-time escalation of unacknowledged reminders, per tick; state in `initiative.json` | A running daemon or web app |
 | Teammates | Installed agent CLIs as named characters; `delegate_task` runs one in the workspace (approval-gated, timed, transcribed) | The CLI itself, logged in by you |
+| Company | A roster (role, standing goal, budget cap per teammate) + a task board (queued/running/done/blocked) in `company.json`; `company_summary` is the heartbeat read | Nothing |
+| Step runs | Multi-step plans run through one teammate, one delegated run per step, stopping at the first failure; every run journaled in `runs/` | A teammate CLI for live runs |
+| Writing | `writing_clean` strips stock AI tells with fixed rules; `writing_voice` measures a voice from samples (sentence length, contraction rate) | Nothing |
 | Media (Muse4AI) | Stdlib client for a locally running Muse4AI app; generate/extend image+video jobs on your own Muse session, polled to completion | Muse4AI installed + running on this machine, its API key |
+| Video projects | A JSON scene spec (text/image/audio scenes with durations), validated against the workspace and rendered to MP4 by the machine's ffmpeg | ffmpeg on the machine for rendering |
 | Notifications | Initiative digests + escalations POSTed as JSON to your webhook (`MAJORDOMO_NOTIFY_WEBHOOK`) | Any webhook receiver (ntfy-style, Make/n8n, …) |
 | Morning brief | `majordomo brief` — reminders, new mail, recent memory, templated from real state | Nothing |
 | Self-filing memory | Opt-in (`MAJORDOMO_AUTO_MEMORY`); a narrow extractor files stated facts after a turn | Nothing |
@@ -196,6 +200,9 @@ Traffic stays inside your encrypted tailnet — nothing is published to the publ
 | `list_reminders` | Show active reminders | Read-only |
 | `mail_list`, `mail_read`, `mail_search` | List, read, and search the inbox | Read-only |
 | `media_status`, `media_list_jobs`, `media_get_job` | Check the local Muse4AI app; list and inspect its generation jobs | Read-only |
+| `company_summary`, `company_board` | The roster + task board: roles, goals, budget caps, run counts, board state | Read-only |
+| `writing_clean`, `writing_voice` | Strip stock AI tells from a text; measure a voice from samples | Read-only |
+| `video_project_validate` | Check a video project spec and its referenced files | Read-only |
 | `memory_remember` | Write one entry to long-term memory | **Acting** |
 | `mail_draft`, `mail_send` | Save an email draft in the workspace; send an email | **Acting** |
 | `workspace_write` | Write a file in the workspace | **Acting** |
@@ -203,6 +210,9 @@ Traffic stays inside your encrypted tailnet — nothing is published to the publ
 | `generate_image` | Generate an image into the workspace | **Acting** |
 | `schedule_reminder`, `cancel_reminder` | Set or cancel reminders | **Acting** |
 | `delegate_task` | Hand a coding task to a teammate (an installed agent CLI) in the workspace | **Acting** |
+| `run_task_steps` | Run a multi-step plan through one teammate, step by step, journaled, stopping on failure | **Acting** |
+| `company_set_agent`, `company_add_task`, `company_set_task_status` | Maintain the roster and move tasks on the board (queueing runs nothing) | **Acting** |
+| `video_project_render` | Render a video project spec to an MP4 in the workspace with ffmpeg | **Acting** |
 | `media_generate_image`, `media_generate_video`, `media_extend_video` | Generate or extend media through the local Muse4AI app, on your Muse session | **Acting** |
 | `<server>__<tool>` (MCP) | Whatever the connected server offers | Follows its `readOnlyHint` |
 
@@ -282,6 +292,15 @@ And as a *server*: `majordomo mcp-server` serves Majordomo's own tools over stdi
 Majordomo can also make pictures and videos — by asking another local app to do it. [Muse4AI](https://github.com/andrew-babo/muse4ai) (MIT, by Andrew Babo) is a Windows desktop app that queues image and video generations on **your own signed-in Muse session** and serves them over a local REST API. Majordomo's media adapter (`src/majordomo/media.py`, standard library only) talks to that API; no Muse4AI code is in this repository, and Majordomo is not affiliated with Meta or with Muse4AI — Muse4AI is the external engine, credited here and in the module.
 
 The tools: `media_status`, `media_list_jobs`, and `media_get_job` are read-only; `media_generate_image`, `media_generate_video`, and `media_extend_video` are **acting** tools — each one spends a generation of your Muse session, so each passes the approval gate. A generation tool submits its job, polls it to completion (bounded by `MAJORDOMO_MEDIA_TIMEOUT`, default 300s), and returns the job id, the final status, and the output's asset id and signed download link. If the wait runs out, the tool says the job is still running and gives its id — never a made-up success.
+
+## The company, step runs, writing, and video projects
+
+Four working patterns, borrowed as ideas and built in Majordomo's own style:
+
+- **The company layer** (`company.py`) gives the team an org chart and a board: each teammate can carry a role, a standing goal, and a budget cap (a planning figure Majordomo reports next to the agent's run count — Majordomo spends no money itself), and tasks queue on a board as queued/running/done/blocked. Queueing a task runs nothing; work still delegates through `delegate_task`, behind the gate. `company_summary` is the heartbeat read over roster + board.
+- **Step runs** (`steprunner.py`) execute a plan through one teammate: each step is an ordinary delegated run (same sandbox, same timeout), the run stops at the first failed step, and every step lands in a journal under `runs/` in the data directory.
+- **Writing tools** (`writing.py`) are fixed, readable rules — no model calls: `writing_clean` strips stock AI tells (filler openers, "delve/leverage/utilize", em-dash overuse) and returns the cleaned text; `writing_voice` measures samples (average sentence length, contraction rate) and can set a draft's stats beside them.
+- **Video projects** (`videoproject.py`) describe a video as JSON — text, image, and audio scenes with durations — validate the spec and its files against the workspace, and render it to MP4 with the machine's **ffmpeg** (title cards, held images, audio scenes). Without ffmpeg the render tool says so plainly; nothing is faked. Generating the scene media itself is the Muse4AI tools' job; this module only assembles.
 
 Setup: install and run Muse4AI on the same machine, create a key in its **Settings → API & agent** screen, then set `MAJORDOMO_MUSE4AI_KEY` (and `MAJORDOMO_MUSE4AI_URL` if it serves somewhere other than `http://127.0.0.1:47821`). The key is sent only in the `Authorization` header — never logged, printed, or included in a tool result. Honest limits: Muse4AI must be installed and running on the same machine (it is a Windows desktop app), generations run through your Muse session via that app, and with no key set — or the app not running — the media tools say exactly that instead of pretending. `MAJORDOMO_MEDIA=off` removes the tools entirely.
 
@@ -384,7 +403,7 @@ Majordomo is a **single-user** agent by design: no accounts, no multi-tenancy, n
 
 There is **no browser automation in v1** — no Chromium form-driving, no clicking through websites. Web research is search + readable fetch, and anything richer belongs in an MCP server you connect (that's what the protocol is for). Image generation ships with a placeholder backend; live images need your own provider key and run on your bill. The fake provider is a demo and testing tool — it pattern-matches obvious requests (now including mail checks, briefs, and look-up-and-save research) and answers the rest with a canned line that says what it is. Real conversation needs Ollama or an API key. The initiative engine and the brief are not the fake provider: they are deterministic code over real state, and they work the same with any provider.
 
-Teammates are a bridge, not a hive mind: each delegation is one headless CLI run — no ACP protocol, no live session, no group chat where the characters talk to each other, and no progress streaming; you get the result when the run ends (or the timeout stops it). Notifications are one-way: a webhook POST out, with nothing listening for replies.
+Teammates are a bridge, not a hive mind: each delegation is one headless CLI run — no ACP protocol, no live session, no group chat where the characters talk to each other, and no progress streaming; you get the result when the run ends (or the timeout stops it). The company layer is a roster and a board, not an autopilot: budget caps are figures you set and Majordomo reports — it does not meter or spend money — and queueing a task on the board runs nothing until a delegation is approved. Video projects assemble described scenes with ffmpeg; they are not AI generation, and a machine without ffmpeg can validate specs but cannot render. Notifications are one-way: a webhook POST out, with nothing listening for replies.
 
 Memory recall is honest token search over your files, not embeddings: it finds what shares words with your question, and it returns nothing rather than guessing. The scheduler fires while a Majordomo listener is running: the web app ticks every 30 seconds, `majordomo daemon` ticks forever on its own, and the shipped systemd / Task Scheduler files (see `docs/always-on.md`) make that listener a real always-on service. And the approval gate is a seatbelt, not a vault: it stops the agent from acting unapproved, but the workspace sandbox and your own backups are what protect your files.
 
@@ -417,7 +436,11 @@ Memory recall is honest token search over your files, not embeddings: it finds w
 │   ├── scheduler.py            # Reminders and the firing engine
 │   ├── initiative.py           # Mail watch + escalation, run per tick
 │   ├── teammates.py            # The agent-CLI bridge: characters, detection, runs, transcripts
+│   ├── company.py              # The roster + task board over the teammates (company.json)
+│   ├── steprunner.py           # Multi-step plans through one teammate, journaled in runs/
+│   ├── writing.py              # De-AI cleaning rules + voice stats
 │   ├── media.py                # Muse4AI client (stdlib) + the media tools
+│   ├── videoproject.py         # JSON scene specs rendered to MP4 with ffmpeg
 │   ├── notify.py               # Outbound webhook notifications (best effort)
 │   ├── brief.py                # The deterministic morning brief
 │   ├── mcp_client.py           # stdio MCP client

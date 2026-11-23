@@ -136,6 +136,16 @@ class Settings(BaseSettings):
         return self.data_dir / "initiative.json"
 
     @property
+    def company_path(self) -> Path:
+        """The company layer's file: the teammate roster + task board."""
+        return self.data_dir / "company.json"
+
+    @property
+    def runs_dir(self) -> Path:
+        """Step-run journals: one JSON file per multi-step plan run."""
+        return self.data_dir / "runs"
+
+    @property
     def teammates_dir(self) -> Path:
         """The teammates' homes: one folder per character (card,
         transcript, notes), created on that character's first run."""

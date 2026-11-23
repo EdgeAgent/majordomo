@@ -6,6 +6,6 @@ workspace, Office documents, a scheduler, and any MCP server — behind an
 approval gate for anything that acts.
 """
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 
 __all__ = ["__version__"]
