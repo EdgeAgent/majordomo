@@ -4,6 +4,41 @@ All notable changes to Majordomo are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.9.1] — 2026-11-23
+
+The verification release: 0.9.0 was exercised end-to-end for the first
+time — Docker image built and run, the MCP server driven over real
+stdio, and the v0.9 tools used the way a user would. Four real bugs
+fell out; all four are fixed here, each with a regression test.
+
+### Fixed
+
+- **Delegated CLIs no longer inherit Majordomo's stdin.** The teammate
+  subprocess ran with the parent's stdin attached; under the MCP
+  server that stdin is the protocol pipe, and `codex exec` (which
+  reads a non-TTY stdin until EOF) hung a real step run to the
+  timeout. Teammate runs now get `stdin=DEVNULL` — the bridge is
+  non-interactive by design. ffmpeg render calls get the same fix.
+- **The MCP stdio stream stays pure JSON-RPC.** structlog's default
+  factory writes to stdout, so any tool that logged mid-call corrupted
+  the protocol stream. `serve_stdio` now routes logging to stderr.
+- **Codex delegation works outside git repos.** `codex exec` refuses
+  a non-git working directory; Majordomo delegates inside its own
+  sandbox directory, so every Codex run failed the trust check. The
+  Codex argv now passes `--skip-git-repo-check` — Majordomo's
+  approval gate and sandbox are the trust boundary.
+
+### Verified
+
+- **Docker**: the image builds from the shipped Dockerfile and runs —
+  CLI, `serve` (health/window/goals/chat, approval gate included),
+  the MCP server, and the test suite inside the container. Verified
+  on Podman/buildah; the stock slim image has no ffmpeg, so video
+  projects validate but do not render in it (stated in the FAQ).
+- Suite: 296 tests (3 new regression tests), on the host and in the
+  container. Still never run, stated plainly: a live-model
+  conversation (no API key on the verification machine).
+
 ## [0.9.0] — 2026-11-23
 
 ### Added

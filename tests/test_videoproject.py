@@ -81,3 +81,20 @@ def test_render_without_ffmpeg_is_honest(tmp_path: Path) -> None:
     project = parse_project({"scenes": [{"kind": "text", "text": "Hi", "duration": 1}]})
     with pytest.raises(ToolError, match="ffmpeg"):
         render_project(project, tmp_path, tmp_path / "out.mp4", ffmpeg_path=None)
+
+
+def test_render_never_inherits_stdin(tmp_path: Path) -> None:
+    """ffmpeg reads stdin interactively; every render call must close it."""
+    seen: list[dict] = []
+
+    def fake_run(argv, **kwargs):
+        seen.append(kwargs)
+        Path(argv[-1]).write_bytes(b"x")
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    project = parse_project({"scenes": [{"kind": "text", "text": "Hi", "duration": 0.5}]})
+    out = render_project(
+        project, tmp_path, tmp_path / "out.mp4", run_fn=fake_run, ffmpeg_path="/fake/ffmpeg"
+    )
+    assert out.exists()
+    assert seen and all(kwargs.get("stdin") is subprocess.DEVNULL for kwargs in seen)

@@ -131,7 +131,10 @@ AGENT_CLIS: dict[str, AgentCLI] = {
             display_name="Codex",
             role="the fast prototyper",
             binary="codex",
-            argv=("exec", _TASK_PLACEHOLDER),
+            # --skip-git-repo-check: delegation runs in Majordomo's own
+            # sandbox directory, which is not a git repo; without the
+            # flag codex exec refuses the directory outright.
+            argv=("exec", "--skip-git-repo-check", _TASK_PLACEHOLDER),
             initial="X",
             colour="#2DD4BF",
             avatar="assets/faces/codex.png",
@@ -361,8 +364,8 @@ def run_teammate(
 
     Raises :class:`ToolError` for an unknown name or a binary that is
     not installed — clean errors, never a crash. The subprocess runs
-    with the task as a single argument (no shell), in ``cwd``, and is
-    killed when ``timeout`` seconds expire.
+    with the task as a single argument (no shell), in ``cwd``, with
+    stdin closed, and is killed when ``timeout`` seconds expire.
     """
     spec, binary_path = _resolve(name, which)
     run = run_fn or subprocess.run
@@ -378,6 +381,11 @@ def run_teammate(
             text=True,
             timeout=timeout,
             check=False,
+            # The bridge is non-interactive: a delegated CLI must never
+            # inherit (and block reading) Majordomo's own stdin — under
+            # the MCP server that stdin is the protocol pipe, and CLIs
+            # like codex read it until EOF when it is not a TTY.
+            stdin=subprocess.DEVNULL,
         )
         exit_code = completed.returncode
         output = _combine(_as_text(completed.stdout), _as_text(completed.stderr))

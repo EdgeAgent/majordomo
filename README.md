@@ -392,7 +392,7 @@ As its brain: any of Anthropic, OpenAI, DeepSeek, Gemini, OpenRouter, Groq, Mist
 In one folder on your machine — the data directory (`~/.majordomo` by default): Markdown memory, JSON sessions/schedules/goals, the teammates' transcripts, and the workspace. Nothing is stored anywhere else by Majordomo.
 
 **Is Docker verified?**
-Honestly: not yet. The Dockerfile and compose file ship and are maintained, but the image has not yet been built and run end-to-end on a Docker machine by the maintainer — treat the pip install as the verified path until that changes.
+Yes — as of 0.9.1 (2026-11-23) the image has been built from this Dockerfile and run end-to-end: the CLI, `serve` (health, the window, goals, chat), the MCP server, and the test suite inside the container all pass. The verification ran on Podman/buildah (OCI-compatible) rather than a Docker daemon, and `docker compose up` itself has not been run by the maintainer — the compose file is the standard one-service shape. One image note: the slim image ships without ffmpeg, so in the stock image video projects validate but cannot render (the tool says so plainly); extend the image with ffmpeg if you want renders in Docker.
 
 **Does it phone home?**
 No. No telemetry, no analytics, no update checks. The only outbound traffic is what you configure: your model provider's endpoint, web search/fetch when you ask for research, your mail servers if you set them up, and your own notification webhook if you set one.

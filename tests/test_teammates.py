@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -72,7 +73,12 @@ def test_the_cast_is_the_brief() -> None:
 
 def test_invocation_templates() -> None:
     assert AGENT_CLIS["claude"].build_argv("/bin/claude", "do it") == ["/bin/claude", "-p", "do it"]
-    assert AGENT_CLIS["codex"].build_argv("/bin/codex", "do it") == ["/bin/codex", "exec", "do it"]
+    assert AGENT_CLIS["codex"].build_argv("/bin/codex", "do it") == [
+        "/bin/codex",
+        "exec",
+        "--skip-git-repo-check",
+        "do it",
+    ]
     assert AGENT_CLIS["opencode"].build_argv("/bin/op", "do it") == ["/bin/op", "run", "do it"]
     assert AGENT_CLIS["aider"].build_argv("/bin/aider", "do it") == [
         "/bin/aider",
@@ -498,3 +504,28 @@ def test_agents_command_shows_run_counts(tmp_path: Path, monkeypatch: pytest.Mon
     assert result.exit_code == 0
     claude_line = next(line for line in result.stdout.splitlines() if "Claude" in line)
     assert "1" in claude_line
+
+
+def test_run_teammate_closes_the_childs_stdin(tmp_path: Path) -> None:
+    """Regression: a delegated CLI must never inherit Majordomo's stdin.
+
+    Under the MCP server that stdin is the protocol pipe; codex (which
+    reads a non-TTY stdin until EOF) hung a real run to the timeout.
+    """
+    captured: dict = {}
+
+    def fake_run(argv, **kwargs):
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(argv, 0, stdout="done", stderr="")
+
+    result = run_teammate(
+        "claude",
+        "fix the parser",
+        cwd=tmp_path,
+        timeout=30,
+        teammates_dir=tmp_path / "teammates",
+        which=lambda _name: "/fake/bin/claude",
+        run_fn=fake_run,
+    )
+    assert result.ok is True
+    assert captured["stdin"] is subprocess.DEVNULL

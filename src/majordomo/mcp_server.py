@@ -118,6 +118,12 @@ def serve_stdio(
     stdout: TextIO | None = None,
 ) -> None:
     """Serve newline-delimited JSON-RPC until stdin closes."""
+    # Stdout belongs to the protocol: route structlog to stderr so a
+    # log line emitted during a tool call can never corrupt the
+    # JSON-RPC stream (the default factory writes to stdout).
+    import structlog
+
+    structlog.configure(logger_factory=structlog.PrintLoggerFactory(file=sys.stderr))
     source = stdin if stdin is not None else sys.stdin
     sink = stdout if stdout is not None else sys.stdout
     for line in source:

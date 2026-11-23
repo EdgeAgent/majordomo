@@ -108,3 +108,43 @@ def test_subprocess_dogfood_with_own_client(tmp_path: Path) -> None:
         assert isinstance(text, str)
     finally:
         client.close()
+
+
+def test_tool_logging_never_reaches_the_protocol_stream() -> None:
+    """Regression: structlog's default factory writes to stdout, which
+    corrupted the JSON-RPC stream whenever a tool logged mid-call.
+    serve_stdio must route logging to stderr."""
+    import structlog
+
+    from majordomo.tools import Tool, ToolRegistry
+
+    def noisy(**_args: object) -> str:
+        structlog.get_logger().info("noisy.tool", detail="must stay off stdout")
+        return "ok"
+
+    registry = ToolRegistry()
+    registry.register(
+        Tool(
+            name="noisy",
+            description="A tool that logs while it works.",
+            parameters={"type": "object", "properties": {}},
+            handler=noisy,
+            read_only=True,
+        )
+    )
+    raw = (
+        json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "noisy", "arguments": {}},
+            }
+        )
+        + "\n"
+    )
+    out = io.StringIO()
+    serve_stdio(registry, stdin=io.StringIO(raw), stdout=out)
+    lines = [line for line in out.getvalue().splitlines() if line.strip()]
+    assert len(lines) == 1
+    assert json.loads(lines[0])["result"]["content"][0]["text"] == "ok"

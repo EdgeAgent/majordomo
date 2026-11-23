@@ -263,6 +263,9 @@ def render_project(
                 capture_output=True,
                 text=True,
                 check=False,
+                # ffmpeg reads stdin interactively; never let it inherit
+                # (and consume) Majordomo's own stdin.
+                stdin=subprocess.DEVNULL,
             )
             if completed.returncode != 0 or not segment.exists():
                 tail = (completed.stderr or "").strip().splitlines()
@@ -288,6 +291,7 @@ def render_project(
             capture_output=True,
             text=True,
             check=False,
+            stdin=subprocess.DEVNULL,
         )
         if completed.returncode != 0 or not output.exists():
             tail = (completed.stderr or "").strip().splitlines()
